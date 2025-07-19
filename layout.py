@@ -49,7 +49,7 @@ def make_layout():
                     ),
 
                     # Sidebar
-                    dmc.AppShellNavbar(make_sidebar(), id="navbar"),
+                    dmc.AppShellNavbar(make_sidebar(theme_config), id="navbar"),
 
                     # Main
                     dmc.AppShellMain([

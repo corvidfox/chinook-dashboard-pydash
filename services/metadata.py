@@ -7,13 +7,15 @@ scalable SQL queries and reusable components.
 """
 
 from services.db import get_connection
+import duckdb
 from services.logging_utils import log_msg
+import pandas as pd
 from typing import Dict, List, Tuple, Any
 from datetime import datetime
 from github import Github
 
 def get_last_commit_date():
-    g = Github()  # Add a token here if your repo is private or rate limits
+    g = Github()
     repo = g.get_repo("corvidfox/chinook-dashboard-pydash")
     last_commit = repo.get_commits()[0]
     return last_commit.commit.author.date.strftime("%b %d, %Y")
@@ -58,60 +60,49 @@ def get_filter_metadata() -> Dict[str, Any]:
         "date_range": (date_min_iso, date_max_iso)
     }
 
-def get_static_summary() -> Dict[str, Any]:
-    """Generates a summary of dataset-level metrics for sidebar display.
-
-    Includes counts and aggregates for purchases, customers, tracks sold,
-    revenue, genres, artists, and countries.
-
-    Returns:
-        dict: A dictionary with summary keys:
-            - 'date_range': str
-            - 'num_purchases': int
-            - 'num_customers': int
-            - 'tracks_sold': int
-            - 'total_revenue': float
-            - 'num_genres': int
-            - 'num_artists': int
-            - 'num_countries': int
+def get_static_summary() -> pd.DataFrame:
     """
-    log_msg("[DATA META] Fetching static dashboard summary from DuckDB.")
-
+    Fires a single SQL pass in DuckDB, unpivots the aggregates,
+    and returns a pandas DataFrame with columns ['Metric', 'Value'].
+    """
     conn = get_connection()
+    sql = """
+    WITH
+    -- Core summary from Invoice only (no join needed for revenue)
+    invoice_summary AS (
+      SELECT
+        MIN(InvoiceDate) AS MinDate,
+        MAX(InvoiceDate) AS MaxDate,
+        ROUND(SUM(Total), 2) AS TotalRevenue,
+        COUNT(DISTINCT InvoiceId) AS NumPurchases,
+        COUNT(DISTINCT CustomerId) AS NumCustomers,
+        COUNT(DISTINCT BillingCountry) AS NumCountries
+      FROM Invoice
+    ),
 
-    summary_sql = """
-        SELECT
-            MIN(InvoiceDate) AS MinDate,
-            MAX(InvoiceDate) AS MaxDate,
-            COUNT(DISTINCT Invoice.InvoiceId) AS NumPurchases,
-            COUNT(DISTINCT CustomerId) AS NumCustomers,
-            COUNT(InvoiceLine.TrackId) AS TracksSold,
-            ROUND(SUM(Invoice.Total), 2) AS TotalRevenue,
-            COUNT(DISTINCT Genre.Name) AS NumGenres,
-            COUNT(DISTINCT Artist.Name) AS NumArtists,
-            COUNT(DISTINCT Invoice.BillingCountry) AS NumCountries
-        FROM Invoice
-        JOIN InvoiceLine ON Invoice.InvoiceId = InvoiceLine.InvoiceId
-        JOIN Track ON InvoiceLine.TrackId = Track.TrackId
-        JOIN Genre ON Track.GenreId = Genre.GenreId
-        JOIN Album ON Track.AlbumId = Album.AlbumId
-        JOIN Artist ON Album.ArtistId = Artist.ArtistId
+    -- Track sales from InvoiceLine
+    track_summary AS (
+      SELECT COUNT(*) AS TracksSold FROM InvoiceLine
+    ),
+
+    -- Catalog counts from standalone tables
+    genre_ct  AS (SELECT COUNT(*) AS NumGenres FROM Genre),
+    artist_ct AS (SELECT COUNT(*) AS NumArtists FROM Artist)
+
+    -- Final unpivot
+    SELECT 'Date Range' AS Metric,
+          STRFTIME('%b %Y', MinDate) || ' – ' || STRFTIME('%b %Y', MaxDate) AS Value
+    FROM invoice_summary
+
+    UNION ALL SELECT 'Number of Purchases',  NumPurchases    FROM invoice_summary
+    UNION ALL SELECT 'Number of Customers',  NumCustomers    FROM invoice_summary
+    UNION ALL SELECT 'Tracks Sold',          TracksSold      FROM track_summary
+    UNION ALL SELECT 'Total Revenue (USD$)', TotalRevenue    FROM invoice_summary
+    UNION ALL SELECT 'Number of Genres',     NumGenres       FROM genre_ct
+    UNION ALL SELECT 'Number of Artists',    NumArtists      FROM artist_ct
+    UNION ALL SELECT 'Number of Countries',  NumCountries    FROM invoice_summary
     """
 
-    result = conn.execute(summary_sql).fetchone()
-    (min_date, max_date, purchases, customers,
-     tracks_sold, revenue, genres, artists, countries) = result
-
-    min_date_fmt = min_date.strftime("%b %Y")
-    max_date_fmt = max_date.strftime("%b %Y")
-
-    return {
-        "date_range": f"{min_date_fmt} to {max_date_fmt}",
-        "num_purchases": purchases,
-        "num_customers": customers,
-        "tracks_sold": tracks_sold,
-        "total_revenue": revenue,
-        "num_genres": genres,
-        "num_artists": artists,
-        "num_countries": countries
-    }
+    # DuckDB’s Python API can directly a pd.DataFrame
+    df: pd.DataFrame = conn.execute(sql).df()
+    return df

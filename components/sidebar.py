@@ -1,15 +1,50 @@
 # components/sidebar.py
 from dash import html
 import dash_mantine_components as dmc
+import dash_ag_grid as dag
 from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
 from services.style_sidebar_utils import make_meta_row
 from dash_iconify import DashIconify
 
 meta = get_filter_metadata()
-summary = get_static_summary()
+summary_df = get_static_summary()
 last_updated = get_last_commit_date()
 
-def make_sidebar():
+columnDefs = [
+        {
+            "headerName": "Metric",
+            "field": "Metric",
+            "flex": 1,
+            "sortable": True,
+            "filter": True,
+        },
+        {
+            "headerName": "Value",
+            "field": "Value",
+            "flex": 1,
+            "sortable": True,
+            "filter": True,
+        },
+    ]
+
+def make_sidebar(color_scheme):
+    is_dark = color_scheme == "dark"
+    ag_theme = "ag-theme-alpine-dark" if is_dark else "ag-theme-alpine"
+
+    summary_table_grid = dag.AgGrid(
+        id="static-summary-table",
+        columnDefs=columnDefs,
+        rowData=summary_df.to_dict("records"),
+        defaultColDef={
+            "resizable": True,
+            "sortable": True,
+            "filter": True,
+        },
+        dashGridOptions={"domLayout": "autoHeight"},
+        className=ag_theme, 
+        style={"width": "100%"},
+    )
+
     return dmc.ScrollArea(
         type="scroll",
         # Add soft buffers from the edges
@@ -106,7 +141,7 @@ def make_sidebar():
                                         dmc.Divider(),
                                         # Static Metadata Table
                                         dmc.Text("Dataset Overview:", size="sm", fw=500, mb=4),
-                                        html.Div(id="static-summary-table")
+                                        summary_table_grid
                                     ])
                                 ]
                             )
