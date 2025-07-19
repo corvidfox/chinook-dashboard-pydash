@@ -1,9 +1,20 @@
 # config.py
-THEMES = {
-    "light": "COSMO",
-    "dark": "SLATE"
-}
-DBC_CSS = "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates/dbc.min.css"
+from services.style_tokens import FONT_SIZES, FONT_WEIGHTS
 
-GITHUB_REPO = "corvidfox/chinook-dashboard-pydash"
 DEFAULT_COLORSCHEME = "light"
+
+def get_mantine_theme(color_scheme: str) -> dict:
+    return {
+        "colorScheme": color_scheme,
+        "fontFamily": "'Inter', sans-serif",
+        "fontSizes": FONT_SIZES,
+        "headings": {
+            "fontFamily": "'Greycliff CF', sans-serif",
+            "fontWeight": FONT_WEIGHTS["extra-bold"],
+        },
+        "primaryColor": "indigo",
+        "radius": {"sm": 4, "md": 8, "lg": 12},
+        "withCssVariables": True,
+        "withGlobalClasses": True
+    }
+

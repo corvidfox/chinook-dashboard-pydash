@@ -1,10 +1,9 @@
+# components/sidebar.py
 from dash import html
 import dash_mantine_components as dmc
 from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
-from services.style_tokens import FONT_SIZES, FONT_WEIGHTS
 from services.style_sidebar_utils import make_meta_row
 from dash_iconify import DashIconify
-from datetime import date
 
 meta = get_filter_metadata()
 summary = get_static_summary()
@@ -13,18 +12,19 @@ last_updated = get_last_commit_date()
 def make_sidebar():
     return dmc.ScrollArea(
         type="scroll",
+        # Add soft buffers from the edges
         style={
             "height": "100vh",
             "paddingTop": "1rem",
             "paddingRight": "1rem",
-            "paddingLeft": "1.2rem",     # soft buffer from edge
+            "paddingLeft": "1.2rem", 
             "paddingBottom": "1rem",
-            "backgroundColor": "#f9f9f9",
         },
         children=[
             dmc.Stack(
                 gap="sm",
                 children=[
+                    # Filters
                     dmc.Title("Filters", order=3),
 
                     dmc.MonthPickerInput(
@@ -85,6 +85,7 @@ def make_sidebar():
 
                     dmc.Button("Clear Filters", id="clear-filters", color="gray", variant="outline", w="100%", mt="xs"),
 
+                    # "About This Data" Accordion
                     dmc.Accordion(
                         value="about-data",
                         children=[
@@ -93,6 +94,7 @@ def make_sidebar():
                                 children=[
                                     dmc.AccordionControl("About This Data"),
                                     dmc.AccordionPanel([
+                                        # Static Items/Links
                                         dmc.Stack([
                                             make_meta_row("fa:pencil", "Created by", "Morrigan M.", "https://github.com/corvidfox"),
                                             make_meta_row("fa:github", "", "GitHub Repo", "https://github.com/corvidfox/chinook-dashboard-rshiny"),
@@ -102,7 +104,7 @@ def make_sidebar():
                                         ], gap="xs", mb="md"),
 
                                         dmc.Divider(),
-
+                                        # Static Metadata Table
                                         dmc.Text("Dataset Overview:", size="sm", fw=500, mb=4),
                                         html.Div(id="static-summary-table")
                                     ])

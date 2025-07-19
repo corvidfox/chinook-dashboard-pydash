@@ -1,58 +1,56 @@
-from dash import Dash, html, Input, Output, State, dcc
+# app.py
+from dash import Dash, Input, Output, clientside_callback
 import dash_bootstrap_components as dbc
-from dash_bootstrap_templates import ThemeSwitchAIO
-from config import THEMES, DBC_CSS, DEFAULT_COLORSCHEME
 from layout import make_layout
 from pages import overview, coming_soon
 
-# Dynamically get the actual theme object
-#theme_name = THEMES[DEFAULT_COLORSCHEME]
-#bootstrap_theme = getattr(dbc.themes, theme_name)
-
-PAGE_MAP = {
-    "/": overview.layout(),
-    "/sales": coming_soon.layout()  # replace with real sales later
-}
-
 app = Dash(
     __name__,
-    external_stylesheets=[dbc.themes.COSMO, dbc.themes.SLATE, DBC_CSS],
+    external_stylesheets=[dbc.themes.FLATLY, dbc.themes.DARKLY],
     suppress_callback_exceptions=True
 )
 
-app.layout = html.Div([
-    dcc.Location(id="url"),
-    ThemeSwitchAIO(aio_id="theme", themes=list(THEMES.values())),
-    dcc.Store(id="navbar-state", data={"collapsed": {"mobile": False, "desktop": False}}), 
-    html.Div(id="main-layout")
-])
+app.layout = make_layout()
 
+# Swap page content
+PAGE_MAP = {"/": overview.layout(), "/sales": coming_soon.layout()}
 
 @app.callback(
-    Output("main-layout", "children"),
+    Output("page-content", "children"),
     Input("url", "pathname"),
-    Input(ThemeSwitchAIO.ids.switch("theme"), "value"),
-    Input("navbar-state", "data"),
 )
-def update_layout(pathname, theme_url, navbar_config):
-    color_scheme = "dark" if theme_url == dbc.themes.SLATE else "light"
-    page = PAGE_MAP.get(pathname, html.Div("404 - Page not found"))
-    return make_layout(color_scheme, navbar_config, page, pathname)
+def render_page(pathname):
+    return PAGE_MAP.get(pathname, "404")
 
-@app.callback(
-    Output("url", "pathname"),
-    Input("main-tabs", "value")
-)
-def update_url_from_tab(tab_value):
-    return tab_value
-
+# Toggle sidebar collapse
 @app.callback(
     Output("navbar-state", "data"),
     Input("burger", "opened"),
 )
-def toggle_navbar(opened):
-    return {"collapsed": {"mobile": not opened, "desktop": not opened}}
+def toggle_navbar(o): return {"collapsed": {"mobile": not o, "desktop": not o}}
 
+# Detect OS/browser light/dark mode preference once
+clientside_callback(
+    """() => window.matchMedia("(prefers-color-scheme: dark)").matches""",
+    Output("preferred-dark-mode", "data"),
+    Input("theme-init-trigger", "n_clicks"),
+)
+
+# Master theme-store updater
+clientside_callback(
+    """
+    (switchOn, prefersDark) => {
+      const scheme = switchOn!==null
+        ? (switchOn ? "dark" : "light")
+        : (prefersDark ? "dark" : "light");
+      document.documentElement.setAttribute("data-mantine-color-scheme", scheme);
+      return { color_scheme: scheme };
+    }
+    """,
+    Output("theme-store", "data"),
+    Input("theme-switch", "checked"),
+    Input("preferred-dark-mode", "data")
+)
 
 if __name__ == "__main__":
     app.run(debug=True)

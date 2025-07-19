@@ -1,0 +1,12 @@
+/* assets/styles.css */
+
+body {
+  background-color: var(--mantine-color-background);
+  color:            var(--mantine-color-text);
+}
+
+/* Tables, links, etc. pick up the text color too: */
+
+table, th, td, a, p {
+  color: var(--mantine-color-text);
+}

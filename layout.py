@@ -1,51 +1,69 @@
 # layout.py
 from dash import html, dcc
 import dash_mantine_components as dmc
+from dash_iconify import DashIconify
+from config import DEFAULT_COLORSCHEME, get_mantine_theme
 from components.sidebar import make_sidebar
-import dash_bootstrap_components as dbc
-from dash_bootstrap_templates import ThemeSwitchAIO
 
-def make_layout(color_scheme, navbar_config, page_content,pathname):
+def make_layout():
+    theme_config = get_mantine_theme(DEFAULT_COLORSCHEME)
+
     return dmc.MantineProvider(
-        theme={"colorScheme": color_scheme},
+        id="mantine-provider",
+        theme=theme_config,
         children=[
-            dcc.Location(id="url"),
+            # Hidden triggers & stores
+            dcc.Location(id="url", refresh=False),
+            html.Button(id="theme-init-trigger", style={"display": "none"}),
+            dcc.Store(id="theme-store", data={"color_scheme": DEFAULT_COLORSCHEME}),
+            dcc.Store(id="preferred-dark-mode", data=False),
+            dcc.Store(id="navbar-state", data={"collapsed": {"mobile": False, "desktop": False}}),
+            dcc.Store(id="viewport-store", data={"width": 1024}),
+            html.Div(id="viewport-trigger", style={"display": "none"}),
 
+            # AppShell
             dmc.AppShell(
-                id = "appshell",
                 padding="md",
                 header={"height": 60},
-                navbar={"width": 260, "breakpoint": "sm", "collapsed": navbar_config["collapsed"]},
+                navbar={"width": 260, "breakpoint": "sm", "collapsed": True},
                 children=[
+
+                    # Header
                     dmc.AppShellHeader(
                         dmc.Group(
-                        justify="space-between",
-                        align="center",
-                        px="md",
-                        py="sm",
-                        style={"height": 60},
-                        children=[
-                            dmc.Burger(id = "burger", size = "sm", opened=not navbar_config["collapsed"]["mobile"]),
-                            dmc.Text("Chinook BI Dashboard", fw=700, fz="lg"),
-                            #ThemeSwitchAIO(aio_id="theme", themes=[dbc.themes.COSMO, dbc.themes.SLATE])
-                        ]
+                            justify="space-between",
+                            align="center",
+                            px="md", py="sm",
+                            children=[
+                                dmc.Burger(id="burger"),
+                                # This <Text> now inherits var(--mantine-color-text)
+                                dmc.Title("Chinook BI Dashboard", order=2),
+                                dmc.Switch(
+                                    id="theme-switch",
+                                    persistence=True,
+                                    offLabel=DashIconify(icon="radix-icons:sun",  width=15),
+                                    onLabel=DashIconify(icon="radix-icons:moon", width=15)
+                                )
+                            ]
                         )
                     ),
-                    dmc.AppShellNavbar(make_sidebar(), id = "navbar"),
+
+                    # Sidebar
+                    dmc.AppShellNavbar(make_sidebar(), id="navbar"),
+
+                    # Main
                     dmc.AppShellMain([
                         dmc.Tabs(
-                            id="main-tabs",
-                            value=pathname,
+                            id="main-tabs", value="/",
                             children=[
                                 dmc.TabsList([
                                     dmc.TabsTab("Overview", value="/"),
-                                    dmc.TabsTab("Sales", value="/sales"),
-                                    # Add more tabs here as we go...
+                                    dmc.TabsTab("Sales",    value="/sales"),
                                 ])
                             ],
                             mb="lg"
                         ),
-                        html.Div(id="page-content", children=page_content)
+                        html.Div(id="page-content")
                     ])
                 ]
             )
