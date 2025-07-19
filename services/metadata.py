@@ -7,7 +7,6 @@ scalable SQL queries and reusable components.
 """
 
 from services.db import get_connection
-import duckdb
 from services.logging_utils import log_msg
 import pandas as pd
 from typing import Dict, List, Tuple, Any

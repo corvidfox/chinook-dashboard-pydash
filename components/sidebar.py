@@ -2,13 +2,8 @@
 from dash import html
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
-from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
 from services.style_sidebar_utils import make_meta_row
 from dash_iconify import DashIconify
-
-meta = get_filter_metadata()
-summary_df = get_static_summary()
-last_updated = get_last_commit_date()
 
 columnDefs = [
         {
@@ -17,6 +12,11 @@ columnDefs = [
             "flex": 1,
             "sortable": True,
             "filter": True,
+            "cellStyle": {
+                "whiteSpace": "normal", 
+                "wordBreak": "break-word", 
+                "lineHeight": "1.3",
+            }
         },
         {
             "headerName": "Value",
@@ -24,10 +24,15 @@ columnDefs = [
             "flex": 1,
             "sortable": True,
             "filter": True,
+            "cellStyle": {
+                "whiteSpace": "normal", 
+                "wordBreak": "break-word", 
+                "lineHeight": "1.3",
+            }
         },
     ]
 
-def make_sidebar(color_scheme):
+def make_sidebar(color_scheme, filter_meta, summary_df, last_updated):
     is_dark = color_scheme == "dark"
     ag_theme = "ag-theme-alpine-dark" if is_dark else "ag-theme-alpine"
 
@@ -68,16 +73,16 @@ def make_sidebar(color_scheme):
                         leftSection=DashIconify(icon="fa:calendar"),
                         type="range",
                         valueFormat="MMM YYYY",
-                        value=[meta["date_range"][0], meta["date_range"][1]],
-                        minDate=meta["date_range"][0],
-                        maxDate=meta["date_range"][1],
+                        value=[filter_meta["date_range"][0], filter_meta["date_range"][1]],
+                        minDate=filter_meta["date_range"][0],
+                        maxDate=filter_meta["date_range"][1],
                         w="100%"
                     ),
 
                     dmc.MultiSelect(
                         label="Country",
                         id="filter-country",
-                        data=[{"label": c, "value": c} for c in meta["countries"]],
+                        data=[{"label": c, "value": c} for c in filter_meta["countries"]],
                         searchable=True,
                         clearable=True,
                         nothingFoundMessage="No matches",
@@ -88,7 +93,7 @@ def make_sidebar(color_scheme):
                     dmc.MultiSelect(
                         label="Genre",
                         id="filter-genre",
-                        data=[{"label": g, "value": g} for g in meta["genres"]],
+                        data=[{"label": g, "value": g} for g in filter_meta["genres"]],
                         searchable=True,
                         clearable=True,
                         nothingFoundMessage="No matches",
@@ -99,7 +104,7 @@ def make_sidebar(color_scheme):
                     dmc.MultiSelect(
                         label="Artist",
                         id="filter-artist",
-                        data=[{"label": a, "value": a} for a in meta["artists"]],
+                        data=[{"label": a, "value": a} for a in filter_meta["artists"]],
                         searchable=True,
                         clearable=True,
                         nothingFoundMessage="No matches",
@@ -140,7 +145,7 @@ def make_sidebar(color_scheme):
 
                                         dmc.Divider(),
                                         # Static Metadata Table
-                                        dmc.Text("Dataset Overview:", size="sm", fw=500, mb=4),
+                                        dmc.Title("Dataset Overview:", order=5, mb=4),
                                         summary_table_grid
                                     ])
                                 ]

@@ -5,7 +5,7 @@ from dash_iconify import DashIconify
 from config import DEFAULT_COLORSCHEME, get_mantine_theme
 from components.sidebar import make_sidebar
 
-def make_layout():
+def make_layout(filter_meta, summary_df, last_updated):
     theme_config = get_mantine_theme(DEFAULT_COLORSCHEME)
 
     return dmc.MantineProvider(
@@ -25,7 +25,7 @@ def make_layout():
             dmc.AppShell(
                 padding="md",
                 header={"height": 60},
-                navbar={"width": 260, "breakpoint": "sm", "collapsed": True},
+                navbar={"width": 300, "breakpoint": "sm", "collapsed": True},
                 children=[
 
                     # Header
@@ -49,7 +49,7 @@ def make_layout():
                     ),
 
                     # Sidebar
-                    dmc.AppShellNavbar(make_sidebar(theme_config), id="navbar"),
+                    dmc.AppShellNavbar(make_sidebar(theme_config, filter_meta, summary_df, last_updated), id="navbar"),
 
                     # Main
                     dmc.AppShellMain([

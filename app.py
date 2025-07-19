@@ -1,8 +1,14 @@
 # app.py
 from dash import Dash, Input, Output, clientside_callback
 import dash_bootstrap_components as dbc
+from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
 from layout import make_layout
 from pages import overview, coming_soon
+
+FILTER_META = get_filter_metadata()
+SUMMARY_DF = get_static_summary()
+LAST_UPDATED = get_last_commit_date()
+
 
 app = Dash(
     __name__,
@@ -10,7 +16,7 @@ app = Dash(
     suppress_callback_exceptions=True
 )
 
-app.layout = make_layout()
+app.layout = make_layout(FILTER_META, SUMMARY_DF, LAST_UPDATED)
 
 # Swap page content
 PAGE_MAP = {"/": overview.layout(), "/sales": coming_soon.layout()}
