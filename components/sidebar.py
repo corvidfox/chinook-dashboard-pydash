@@ -2,15 +2,18 @@
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 from services.style_sidebar_utils import make_meta_row
-from dash_iconify import DashIconify
+from components import filters
 
 columnDefs = [
         {
             "headerName": "Metric",
             "field": "Metric",
             "flex": 1,
+            "minWidth": 120,
             "sortable": True,
             "filter": True,
+            "wrapText": True,
+            "autoHeight": True,
             "cellStyle": {
                 "whiteSpace": "normal", 
                 "wordBreak": "break-word", 
@@ -21,8 +24,11 @@ columnDefs = [
             "headerName": "Value",
             "field": "Value",
             "flex": 1,
+            "minWidth": 120,
             "sortable": True,
             "filter": True,
+            "wrapText": True,
+            "autoHeight": True,
             "cellStyle": {
                 "whiteSpace": "normal", 
                 "wordBreak": "break-word", 
@@ -32,8 +38,6 @@ columnDefs = [
     ]
 
 def make_sidebar(color_scheme, filter_meta, summary_df, last_updated):
-    is_dark = color_scheme == "dark"
-    ag_theme = "ag-theme-alpine-dark" if is_dark else "ag-theme-alpine"
 
     summary_table_grid = dag.AgGrid(
         id="static-summary-table",
@@ -45,8 +49,8 @@ def make_sidebar(color_scheme, filter_meta, summary_df, last_updated):
             "filter": True,
         },
         dashGridOptions={"domLayout": "autoHeight"},
-        className=ag_theme, 
-        style={"width": "100%"},
+        className="", 
+        style={"width": "100%", "maxWidth": "100%"},
     )
 
     return dmc.ScrollArea(
@@ -65,65 +69,12 @@ def make_sidebar(color_scheme, filter_meta, summary_df, last_updated):
                 children=[
                     # Filters
                     dmc.Title("Filters", order=3),
-
-                    dmc.MonthPickerInput(
-                        label="Date Range",
-                        id="filter-date",
-                        leftSection=DashIconify(icon="fa:calendar"),
-                        type="range",
-                        valueFormat="MMM YYYY",
-                        value=[filter_meta["date_range"][0], filter_meta["date_range"][1]],
-                        minDate=filter_meta["date_range"][0],
-                        maxDate=filter_meta["date_range"][1],
-                        w="100%"
-                    ),
-
-                    dmc.MultiSelect(
-                        label="Country",
-                        id="filter-country",
-                        data=[{"label": c, "value": c} for c in filter_meta["countries"]],
-                        searchable=True,
-                        clearable=True,
-                        nothingFoundMessage="No matches",
-                        maxDropdownHeight=160,
-                        w="100%"
-                    ),
-
-                    dmc.MultiSelect(
-                        label="Genre",
-                        id="filter-genre",
-                        data=[{"label": g, "value": g} for g in filter_meta["genres"]],
-                        searchable=True,
-                        clearable=True,
-                        nothingFoundMessage="No matches",
-                        maxDropdownHeight=160,
-                        w="100%"
-                    ),
-
-                    dmc.MultiSelect(
-                        label="Artist",
-                        id="filter-artist",
-                        data=[{"label": a, "value": a} for a in filter_meta["artists"]],
-                        searchable=True,
-                        clearable=True,
-                        nothingFoundMessage="No matches",
-                        maxDropdownHeight=180,
-                        w="100%"
-                    ),
-
-                    dmc.Select(
-                        label="Metric",
-                        id="filter-metric",
-                        value="revenue",
-                        data=[
-                            {"label": "Revenue (USD$)", "value": "revenue"},
-                            {"label": "Number of Customers", "value": "num_cust"},
-                        ],
-                        w="100%"
-                    ),
-
-                    dmc.Button("Clear Filters", id="clear-filters", color="gray", variant="outline", w="100%", mt="xs"),
-
+                    filters.date_filter(filter_meta),
+                    filters.country_filter(filter_meta),
+                    filters.genre_filter(filter_meta),
+                    filters.artist_filter(filter_meta),
+                    filters.metric_filter(),
+                    filters.clear_button(),
                     # "About This Data" Accordion
                     dmc.Accordion(
                         value="about-data",
