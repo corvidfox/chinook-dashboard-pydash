@@ -1,5 +1,5 @@
 # app.py
-from dash import html, Dash, Input, Output, clientside_callback
+from dash import html, Dash, Input, Output, clientside_callback, dcc, ctx
 import dash_bootstrap_components as dbc
 from config import DEFAULT_COLORSCHEME
 from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
@@ -18,7 +18,17 @@ app = Dash(
     suppress_callback_exceptions=True
 )
 
-app.layout = make_layout(FILTER_META, SUMMARY_DF, LAST_UPDATED, INITIAL_NAVBAR_STATE, DEFAULT_COLORSCHEME)
+app.layout = html.Div([
+    # Hidden triggers & stores
+    dcc.Location(id="url", refresh=False),
+    dcc.Interval(id="theme-init-trigger", interval=10, max_intervals=1, disabled=False),
+    dcc.Store(id="theme-store", data=None),
+    dcc.Store(id="preferred-dark-mode", data=False),
+    dcc.Store(id="navbar-state", data=INITIAL_NAVBAR_STATE),
+    dcc.Store(id="viewport-store", data={"width": 1024}),
+    html.Div(id="viewport-trigger", style={"display": "none"}),
+    make_layout(FILTER_META, SUMMARY_DF, LAST_UPDATED, INITIAL_NAVBAR_STATE, DEFAULT_COLORSCHEME)
+])
 
 # Swap page content
 PAGE_MAP = {"/": overview.layout(), "/sales": coming_soon.layout()}
@@ -42,7 +52,7 @@ def toggle_navbar(o): return {"collapsed": {"mobile": not o, "desktop": not o}}
     Input("navbar-state", "data")
 )
 def sync_navbar(navbar_state):
-    return navbar_state["collapsed"]
+    return navbar_state["collapsed"]["mobile"]
 
 @app.callback(
     Output("navbar", "children"),
@@ -84,11 +94,34 @@ def update_layout(navbar_state, theme_data):
         theme_data["color_scheme"]
     )
 
+from dash import ctx  # to identify the triggered Input
+
+@app.callback(
+    Output("filter-date", "value"),
+    Output("filter-country", "value"),
+    Output("filter-genre", "value"),
+    Output("filter-artist", "value"),
+    Output("filter-metric", "value"),
+    Input("clear-filters", "n_clicks"),
+    prevent_initial_call=True
+)
+def clear_filters(n_clicks):
+    return (
+        # Date Range
+        [FILTER_META["date_range"][0], FILTER_META["date_range"][1]],
+        # Country, Genre, Artist
+        [],
+        [],
+        [],
+        # Metric
+        "revenue"  # metric
+    )
+
 # Detect OS/browser light/dark mode preference once
 clientside_callback(
     """() => window.matchMedia("(prefers-color-scheme: dark)").matches""",
     Output("preferred-dark-mode", "data"),
-    Input("theme-init-trigger", "n_clicks"),
+    Input("theme-init-trigger", "n_intervals"),
 )
 
 # Master theme-store updater

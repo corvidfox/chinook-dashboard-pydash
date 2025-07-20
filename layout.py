@@ -14,15 +14,6 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, color_schem
         withCssVariables=True,
         defaultColorScheme=color_scheme,
         children=[
-            # Hidden triggers & stores
-            dcc.Location(id="url", refresh=False),
-            html.Button(id="theme-init-trigger", style={"display": "none"}),
-            dcc.Store(id="theme-store", data={"color_scheme": color_scheme}),
-            dcc.Store(id="preferred-dark-mode", data=False),
-            dcc.Store(id="navbar-state", data={"collapsed": {"mobile": False, "desktop": False}}),
-            dcc.Store(id="viewport-store", data={"width": 1024}),
-            html.Div(id="viewport-trigger", style={"display": "none"}),
-
             # AppShell
             dmc.AppShell(
                 padding="md",
@@ -37,7 +28,7 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, color_schem
                             align="center",
                             px="md", py="sm",
                             children=[
-                                dmc.Burger(id="burger"),
+                                dmc.Burger(id="burger", opened=True),
                                 # This <Text> now inherits var(--mantine-color-text)
                                 dmc.Title("Chinook BI Dashboard", order=2),
                                 dmc.Switch(
