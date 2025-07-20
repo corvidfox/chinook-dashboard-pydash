@@ -12,6 +12,7 @@ import pandas as pd
 from typing import Dict, List, Tuple, Any
 from datetime import datetime
 from github import Github
+from services.display_utils import format_kpi_value
 
 def get_last_commit_date():
     g = Github()
@@ -102,6 +103,22 @@ def get_static_summary() -> pd.DataFrame:
     UNION ALL SELECT 'Number of Countries',  NumCountries    FROM invoice_summary
     """
 
-    # DuckDB’s Python API can directly a pd.DataFrame
+    # Execute DuckDB Query, Obtain pd.DataFrame
     df: pd.DataFrame = conn.execute(sql).df()
+
+    # Apply formatting
+    def format_row(row):
+        metric = row["Metric"]
+        raw_value = row["Value"]
+
+        if metric == "Date Range":
+            return raw_value  # already formatted
+
+        if metric == "Total Revenue (USD$)":
+            return format_kpi_value(float(raw_value), type="dollar")
+
+        return format_kpi_value(float(raw_value), type="number")
+
+    df["Value"] = df.apply(format_row, axis=1)
+    
     return df
