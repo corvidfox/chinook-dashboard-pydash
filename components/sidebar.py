@@ -1,5 +1,4 @@
 # components/sidebar.py
-from dash import html
 import dash_mantine_components as dmc
 import dash_ag_grid as dag
 from services.style_sidebar_utils import make_meta_row
