@@ -1,0 +1,53 @@
+"""
+Application shell layout for the Chinook dashboard.
+
+Composes the AppShell with header, sidebar container, tabs, page content, and hidden filters.
+"""
+
+from dash import html
+import dash_mantine_components as dmc
+from components.header import make_header
+
+
+def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, filter_block, active_tab):
+    """
+    Builds the full application layout using Mantine AppShell.
+
+    Parameters:
+        filter_meta (dict): Filter options metadata.
+        summary_df (pd.DataFrame): Summary table metrics.
+        last_updated (str): Timestamp string.
+        navbar_state (dict): Sidebar collapse state.
+        scheme (str): Active color scheme ("light"/"dark").
+        filter_block (Component): Hidden filter components.
+        active_tab (str): Currently active page path.
+
+    Returns:
+        dmc.AppShell
+    """
+    return dmc.AppShell(
+        padding="md",
+        header={"height": 60},
+        navbar={"width": 300, "breakpoint": "sm"},
+        children=[
+            make_header(navbar_collapsed=navbar_state["collapsed"]["mobile"]),
+
+            dmc.AppShellNavbar(id="navbar", children=[], style={}),
+
+            dmc.AppShellMain([
+                dmc.Tabs(
+                    id="main-tabs",
+                    value=active_tab,
+                    children=[
+                        dmc.TabsList([
+                            dmc.TabsTab("Overview", value="/"),
+                            dmc.TabsTab("Sales",    value="/sales"),
+                        ])
+                    ],
+                    mb="lg"
+                ),
+                html.Div(id="page-content"),
+                html.Div(filter_block, style={"display": "none"})
+            ])
+        ]
+    )

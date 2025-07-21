@@ -1,47 +1,95 @@
-# services/display_utils.py
+"""
+Display utilities for formatting values in the Chinook dashboard.
+
+Includes:
+- format_kpi_value(): Converts numbers, currencies, percentages, and country codes to human-readable strings
+- flagify_country(): Translates ISO country codes into emoji flags + labels
+- standardize_country_to_iso3(): Cleans arbitrary country names to ISO-3 format
+"""
 
 import locale
 import country_converter as coco
+from typing import Union
 
-locale.setlocale(locale.LC_ALL, '')  # System locale for commas/periods
 
-def format_kpi_value(value, type="number", accuracy=0.01, prefix="$", label=True, label_type="name"):
+# Set system locale for number formatting (fallback to default)
+try:
+    locale.setlocale(locale.LC_ALL, "")
+except Exception:
+    locale.setlocale(locale.LC_ALL, "C")
+
+
+def format_kpi_value(
+    value: Union[int, float, str],
+    value_type: str = "number",
+    accuracy: float = 0.01,
+    prefix: str = "$",
+    label: bool = True,
+    label_type: str = "name"
+) -> str:
     """
-    Format numeric or country values for consistent dashboard display.
-    Supported types: "dollar", "percent", "number", "float", "country".
-    """
-    if type not in {"dollar", "percent", "number", "float", "country"}:
-        raise ValueError(f"Unsupported type: {type}")
+    Format a KPI value for display. Supports:
+    - 'dollar': currency with prefix
+    - 'percent': percentage with two decimals
+    - 'number': comma-grouped integer or float
+    - 'float': float with dynamic precision
+    - 'country': flag + optional label
 
-    # Handle NA cases
-    if value is None or (type != "country" and not isinstance(value, (int, float))):
+    Parameters:
+        value: Numeric or country input
+        value_type: Display type ('number', 'dollar', etc)
+        accuracy: Rounding precision (e.g. 0.01 → round to hundredths)
+        prefix: Currency symbol if value_type == 'dollar'
+        label: Country label toggle for value_type == 'country'
+        label_type: 'name' or 'iso3' for country label
+
+    Returns:
+        str: Formatted string for display
+    """
+    if value_type not in {"dollar", "percent", "number", "float", "country"}:
+        raise ValueError(f"Unsupported value_type: {value_type}")
+
+    if value is None or (value_type != "country" and not isinstance(value, (int, float))):
         return "NA"
 
-    # Format numbers
-    if type == "percent":
-        return f"{round(value * 100, 2):.2f}%"
+    # Determine decimal places from accuracy
+    try:
+        decimal_places = max(0, -int(round(locale.log10(accuracy))))
+    except Exception:
+        decimal_places = 2  # fallback
 
-    if type == "dollar":
-        return f"{prefix}{locale.format_string('%.2f', round(value, 2), grouping=True)}"
+    if value_type == "percent":
+        return f"{round(value * 100, decimal_places):.{decimal_places}f}%"
 
-    if type == "float":
-        return f"{locale.format_string('%.2f', round(value, 2), grouping=True)}"
+    if value_type == "dollar":
+        rounded = round(value, decimal_places)
+        return f"{prefix}{locale.format_string(f'%.{decimal_places}f', rounded, grouping=True)}"
 
-    if type == "number":
-        if value % 1 == 0:
-            return locale.format_string("%d", int(value), grouping=True)
-        else:
-            return locale.format_string('%.2f', round(value, 2), grouping=True)
+    if value_type == "float":
+        rounded = round(value, decimal_places)
+        return locale.format_string(f'%.{decimal_places}f', rounded, grouping=True)
 
-    if type == "country":
-        return flagify_country(value, label=label, label_type=label_type)
+    if value_type == "number":
+        rounded = round(value, decimal_places)
+        if decimal_places == 0:
+            return locale.format_string("%d", int(rounded), grouping=True)
+        return locale.format_string(f'%.{decimal_places}f', rounded, grouping=True)
+
+    if value_type == "country":
+        return flagify_country(str(value), label=label, label_type=label_type)
 
     return str(value)
 
 
-def standardize_country_to_iso3(input_str):
+def standardize_country_to_iso3(input_str: str) -> Union[str, None]:
     """
-    Convert country name or code to ISO Alpha-3 code (e.g., 'USA').
+    Converts a country name or code to ISO-3 format (e.g. "USA").
+
+    Parameters:
+        input_str (str): Country name or code
+
+    Returns:
+        str or None: ISO-3 code, or None if unresolvable
     """
     if not isinstance(input_str, str):
         return None
@@ -50,10 +98,19 @@ def standardize_country_to_iso3(input_str):
     return iso3 if iso3 != "not found" else None
 
 
-def flagify_country(input_str, label=False, label_type="name"):
+def flagify_country(input_str: str, label: bool = False, label_type: str = "name") -> str:
     """
-    Convert country identifier to emoji + optional label ("🇺🇸 United States").
-    Accepts country name, ISO2, or ISO3.
+    Creates a country flag emoji string based on input.
+
+    Accepts country name, ISO2, or ISO3; returns "🇺🇸 United States" or just "🇺🇸".
+
+    Parameters:
+        input_str (str): Country name or code
+        label (bool): Whether to include country name
+        label_type (str): "name" or "iso3"
+
+    Returns:
+        str: Flag emoji + optional label
     """
     if not isinstance(input_str, str):
         return "NA"
@@ -62,17 +119,10 @@ def flagify_country(input_str, label=False, label_type="name"):
     if iso2 == "not found" or len(iso2) != 2:
         return "NA"
 
-    # Unicode flag construction
     flag = ''.join([chr(127397 + ord(c)) for c in iso2.upper()])
 
     if not label:
         return flag
 
-    if label_type == "name":
-        label_text = coco.convert(names=iso2, to="name_short")
-    elif label_type == "iso3":
-        label_text = coco.convert(names=iso2, to="ISO3")
-    else:
-        label_text = ""
-
-    return f"{flag} {label_text}" if label_text else flag
+    label_text = coco.convert(names=iso2, to="name_short" if label_type == "name" else "ISO3")
+    return f"{flag} {label_text}" if label_text and label_text != "not found" else flag

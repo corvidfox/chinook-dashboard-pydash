@@ -1,8 +1,27 @@
-# components/filters.py
+"""
+Filter components for the Chinook dashboard sidebar.
+
+This module provides reusable Mantine-styled filter inputs for country, genre,
+artist, metric, and date range selection, along with a filter reset button.
+All filters support persistence via Dash's session-based storage.
+
+Includes a helper to assemble all filters into a standardized block layout.
+"""
+
 import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 
+
 def date_filter(filter_meta):
+    """
+    Creates a MonthPickerInput for selecting a date range.
+
+    Parameters:
+        filter_meta (dict): Metadata containing min/max date range.
+
+    Returns:
+        dmc.MonthPickerInput
+    """
     return dmc.MonthPickerInput(
         label="Date Range",
         id="filter-date",
@@ -13,11 +32,21 @@ def date_filter(filter_meta):
         minDate=filter_meta["date_range"][0],
         maxDate=filter_meta["date_range"][1],
         w="100%",
-        persistence=True, 
+        persistence=True,
         persistence_type="session"
     )
 
+
 def country_filter(filter_meta):
+    """
+    Creates a MultiSelect for filtering by country.
+
+    Parameters:
+        filter_meta (dict): Metadata containing list of countries.
+
+    Returns:
+        dmc.MultiSelect
+    """
     return dmc.MultiSelect(
         label="Country",
         id="filter-country",
@@ -27,11 +56,21 @@ def country_filter(filter_meta):
         nothingFoundMessage="No matches",
         maxDropdownHeight=160,
         w="100%",
-        persistence=True, 
+        persistence=True,
         persistence_type="session"
     )
 
+
 def genre_filter(filter_meta):
+    """
+    Creates a MultiSelect for filtering by genre.
+
+    Parameters:
+        filter_meta (dict): Metadata containing list of genres.
+
+    Returns:
+        dmc.MultiSelect
+    """
     return dmc.MultiSelect(
         label="Genre",
         id="filter-genre",
@@ -41,11 +80,21 @@ def genre_filter(filter_meta):
         nothingFoundMessage="No matches",
         maxDropdownHeight=160,
         w="100%",
-        persistence=True, 
+        persistence=True,
         persistence_type="session"
     )
 
+
 def artist_filter(filter_meta):
+    """
+    Creates a MultiSelect for filtering by artist.
+
+    Parameters:
+        filter_meta (dict): Metadata containing list of artists.
+
+    Returns:
+        dmc.MultiSelect
+    """
     return dmc.MultiSelect(
         label="Artist",
         id="filter-artist",
@@ -55,11 +104,18 @@ def artist_filter(filter_meta):
         nothingFoundMessage="No matches",
         maxDropdownHeight=180,
         w="100%",
-        persistence=True, 
+        persistence=True,
         persistence_type="session"
     )
 
+
 def metric_filter():
+    """
+    Creates a Select dropdown for choosing a summary metric.
+
+    Returns:
+        dmc.Select
+    """
     return dmc.Select(
         label="Metric",
         id="filter-metric",
@@ -69,9 +125,43 @@ def metric_filter():
             {"label": "Number of Customers", "value": "num_cust"},
         ],
         w="100%",
-        persistence=True, 
+        persistence=True,
         persistence_type="session"
     )
 
+
 def clear_button():
-    return dmc.Button("Clear Filters", id="clear-filters", color="gray", variant="outline", w="100%", mt="xs")
+    """
+    Creates a button to clear all filters.
+
+    Returns:
+        dmc.Button
+    """
+    return dmc.Button(
+        "Clear Filters",
+        id="clear-filters",
+        color="gray",
+        variant="outline",
+        w="100%",
+        mt="xs"
+    )
+
+
+def make_filter_block(filter_meta):
+    """
+    Assembles all filter components into a vertically stacked layout.
+
+    Parameters:
+        filter_meta (dict): Metadata required by filter components.
+
+    Returns:
+        dmc.Stack
+    """
+    return dmc.Stack([
+        date_filter(filter_meta),
+        country_filter(filter_meta),
+        genre_filter(filter_meta),
+        artist_filter(filter_meta),
+        metric_filter(),
+        clear_button()
+    ], gap="sm")
