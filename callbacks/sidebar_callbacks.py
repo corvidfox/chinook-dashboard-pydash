@@ -5,6 +5,7 @@ Handles burger toggle logic, sidebar visibility, and dynamic re-rendering.
 
 from dash import Input, Output, State, clientside_callback
 from config import DEFAULT_COLORSCHEME
+from services.logging_utils import log_msg
 from components.sidebar import make_sidebar
 from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
 
@@ -12,6 +13,7 @@ from services.metadata import get_filter_metadata, get_static_summary, get_last_
 FILTER_META = get_filter_metadata()
 SUMMARY_DF = get_static_summary()
 LAST_UPDATED = get_last_commit_date()
+log_msg("[CALLBACK:sidebar] Loaded static sidebar metadata")
 
 def register_callbacks(app):
     @app.callback(
@@ -23,6 +25,7 @@ def register_callbacks(app):
         """
         Updates navbar collapsed state from burger toggle.
         """
+        log_msg(f"[CALLBACK:sidebar] Burger toggled — collapsed state now {not opened}")
         return {"collapsed": {"mobile": not opened, "desktop": not opened}}
 
     @app.callback(
@@ -45,6 +48,8 @@ def register_callbacks(app):
         Rebuilds sidebar content when theme or navbar state changes.
         """
         scheme = theme_data["color_scheme"] if theme_data and "color_scheme" in theme_data else DEFAULT_COLORSCHEME
+        log_msg(f"[CALLBACK:sidebar] Rebuilding sidebar — theme: {scheme}")
+        log_msg(f"     [CALLBACK:sidebar] Sidebar content → filters={len(FILTER_META)}, metrics={len(SUMMARY_DF)}")
         return make_sidebar(scheme, FILTER_META, SUMMARY_DF, LAST_UPDATED)
 
     @app.callback(
@@ -56,6 +61,7 @@ def register_callbacks(app):
         Animates sidebar width based on collapsed state.
         """
         collapsed = navbar_state["collapsed"]["mobile"]
+        log_msg(f"[CALLBACK:sidebar] Sidebar collapse status: {collapsed}")
         return {
             "width": 0 if collapsed else 300,
             "overflow": "hidden",

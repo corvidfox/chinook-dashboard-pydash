@@ -5,7 +5,20 @@ Handles synchronization between tab selection, URL path, and active page view.
 
 from dash import Input, Output, State, html
 from dash.exceptions import PreventUpdate
+from services.logging_utils import log_msg
+
 from pages import overview, coming_soon
+
+# Page map for routing tabs to layouts
+PAGE_MAP = {
+    "/": overview.layout,
+    "/time-series": coming_soon.layout,
+    "/geo": coming_soon.layout,
+    "/by-genre": coming_soon.layout,
+    "/by-artist": coming_soon.layout,
+    "/retention": coming_soon.layout,
+    "/insights": coming_soon.layout,
+}
 
 def register_callbacks(app):
     @app.callback(
@@ -20,12 +33,11 @@ def register_callbacks(app):
         State("filter-metric", "value"),
     )
     def render_page(tab_value, theme_data, date_range, country, genre, artist, metric):
-        """
-        Renders the current page content based on selected tab.
-        Updates the active page store to maintain route on layout refresh.
-        """
         if not tab_value:
             raise PreventUpdate
+
+        if tab_value not in PAGE_MAP:
+            log_msg(f"     [CALLBACK:routing] Invalid tab route: {tab_value}", level="warning")
 
         filters = {
             "date": date_range,
@@ -35,14 +47,11 @@ def register_callbacks(app):
             "metric": metric,
         }
 
-        if tab_value == "/":
-            layout = overview.layout()
-        elif tab_value == "/sales":
-            layout = coming_soon.layout()
-        else:
-            layout = html.Div("404 Page Not Found")
+        log_msg(f"[CALLBACK:routing] Rendering page → {tab_value}")
+        log_msg(f"     [CALLBACK:routing] Active filters → {filters}")
 
-        return layout, tab_value
+        layout_func = PAGE_MAP.get(tab_value, lambda: html.Div("404 Page Not Found"))
+        return layout_func(), tab_value
 
     @app.callback(
         Output("url", "pathname"),
@@ -53,4 +62,5 @@ def register_callbacks(app):
         """
         Syncs tab selection with browser URL.
         """
+        log_msg(f"[CALLBACK:routing] URL updated from tab selection → {tab_value}")
         return tab_value

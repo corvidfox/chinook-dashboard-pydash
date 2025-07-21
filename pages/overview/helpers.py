@@ -5,40 +5,30 @@ Overview tab utilities for filtering, data orchestration, and page-specific quer
 Includes:
 - get_filtered_data(): end-to-end data pipeline for overview filters
 - get_invoices_details(): overview-specific SQL for invoice-level results
+- get_genre_catalog(): review the genre_catalog temp table from DuckDB
+- get_artist_catalog(): review the artist_catalog temp table from DuckDB
 """
 
 import pandas as pd
 from duckdb import DuckDBPyConnection
 from services.db import get_connection
-from services.sql_filters import form_where_clause
-from services.sql_core import get_events_shared
 from services.logging_utils import log_msg
+from services.sql_filters import apply_date_filter
 
-
-def get_invoices_details(conn: DuckDBPyConnection, invoice_ids: list, date_range: list) -> pd.DataFrame:
+def get_invoices_details(conn: DuckDBPyConnection, date_range: list) -> pd.DataFrame:
     """
-    Returns full invoice-level data scoped to selected IDs + date range.
+    Returns full invoice-level data scoped to filtered_invoices + date range.
 
     Parameters:
         conn (DuckDBPyConnection): Active DuckDB connection
-        invoice_ids (List[int]): Invoice ID filter list
         date_range (List[str]): ISO dates ["YYYY-MM-DD", "YYYY-MM-DD"]
 
     Returns:
         pd.DataFrame: Invoice metadata with totals
     """
-    log_msg("[SQL] Running get_invoices_details()")
+    log_msg(f"[PAGE-OVV-SQL] Running get_invoices_details for range: {date_range}")
 
-    if not invoice_ids:
-        return pd.DataFrame()
-
-    invoice_str = ", ".join(str(i) for i in invoice_ids)
-    clauses = [f"i.InvoiceId IN ({invoice_str})"]
-
-    if date_range and len(date_range) == 2:
-        start = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
-        end = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
-        clauses.append(f"DATE(i.InvoiceDate) BETWEEN DATE('{start}') AND DATE('{end}')")
+    join_clause = apply_date_filter(date_range)
 
     query = f"""
         SELECT
@@ -47,43 +37,67 @@ def get_invoices_details(conn: DuckDBPyConnection, invoice_ids: list, date_range
             i.InvoiceDate,
             i.BillingCountry,
             i.Total
-        FROM Invoice i
-        WHERE {' AND '.join(clauses)}
+        FROM filtered_invoices e
+        {join_clause}
     """
 
     return conn.execute(query).fetchdf()
 
 
-def get_filtered_data(filters: dict):
+def get_filtered_data(date_range: list) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Applies dashboard filters and returns matching event + invoice results.
+    Pulls filtered event and invoice data from DuckDB, using current temp table.
 
     Parameters:
-        filters (dict): {
-            'date': List[str],
-            'country': List[str],
-            'genre': List[str],
-            'artist': List[str],
-            'metric': str
-        }
+        date_range (List[str]): ISO dates ["YYYY-MM-DD", "YYYY-MM-DD"]
 
     Returns:
         tuple:
-            pd.DataFrame → event-level stream
+            pd.DataFrame → event-level stream (from filtered_invoices)
             pd.DataFrame → invoice-level summary
-            List[str]    → SQL WHERE clauses used
     """
     conn = get_connection()
 
-    where_clauses = form_where_clause(
-        country=filters.get("country"),
-        genre=filters.get("genre"),
-        artist=filters.get("artist")
-    )
+    log_msg("[PAGE-OVV-SQL] Reading filtered_invoices temp table")
+    try:
+        events_df = conn.execute("SELECT * FROM filtered_invoices").fetchdf()
+    except Exception:
+        log_msg("[PAGE-OVV-SQL] filtered_invoices temp table not found", level="warning")
+        return pd.DataFrame(), pd.DataFrame()
 
-    event_df = get_events_shared(conn, where_clauses)
-    invoice_ids = event_df["InvoiceId"].unique().tolist()
+    invoices_df = get_invoices_details(conn, date_range)
 
-    invoice_df = get_invoices_details(conn, invoice_ids, filters.get("date"))
+    log_msg(f"     [PAGE-OVV-SQL] Loaded {len(events_df)} filtered events, {len(invoices_df)} invoices")
 
-    return event_df, invoice_df, where_clauses
+    return events_df, invoices_df
+
+def get_genre_catalog() -> pd.DataFrame:
+    """
+    Reads the genre_catalog temp table from DuckDB.
+
+    Returns:
+        pd.DataFrame: Columns = ['genre', 'num_tracks']
+    """
+    conn = get_connection()
+    log_msg("[PAGE-OVV-SQL] Reading genre_catalog temp table.")
+    try:
+        return conn.execute("SELECT * FROM genre_catalog").fetchdf()
+    except Exception:
+        log_msg("     [PAGE-OVV-SQL] genre_catalog temp table not found", level="warning")
+        return pd.DataFrame()
+
+
+def get_artist_catalog() -> pd.DataFrame:
+    """
+    Reads the artist_catalog temp table from DuckDB.
+
+    Returns:
+        pd.DataFrame: Columns = ['artist', 'num_tracks']
+    """
+    conn = get_connection()
+    log_msg("[PAGE-OVV-SQL] Reading artist_catalog temp table")
+    try:
+        return conn.execute("SELECT * FROM artist_catalog").fetchdf()
+    except Exception:
+        log_msg("     [PAGE-OVV-SQL] artist_catalog temp table not found", level="warning")
+        return pd.DataFrame()

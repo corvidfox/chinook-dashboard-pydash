@@ -2,25 +2,51 @@
 sql_core.py
 
 Reusable SQL queries that support cross-page data features like event stream.
+Includes fingerprint-aware event filtering.
 """
 
-from typing import List
+from typing import List, Optional, Tuple
 from duckdb import DuckDBPyConnection
+import hashlib
 import pandas as pd
 from services.logging_utils import log_msg
 
-def get_events_shared(conn: DuckDBPyConnection, where_clauses: List[str]) -> pd.DataFrame:
+
+def hash_invoice_ids(df: pd.DataFrame) -> str:
     """
-    Fetches event-level invoice metadata with filters.
+    Generates a hash signature based on sorted, unique InvoiceIds.
 
     Parameters:
-        conn (DuckDBPyConnection)
-        where_clauses (List[str])
+        df (pd.DataFrame): Filtered event-level data with InvoiceId column.
 
     Returns:
-        pd.DataFrame: Columns = ['CustomerId', 'dt', 'InvoiceId']
+        str: MD5 hash representing the invoice set's identity.
     """
-    log_msg("[SQL] Running get_events_shared()")
+    invoice_ids = df["InvoiceId"].dropna().unique()
+    sorted_ids = sorted(map(str, invoice_ids))
+    serialized = ",".join(sorted_ids)
+    return hashlib.md5(serialized.encode()).hexdigest()
+
+
+def get_events_shared(
+    conn: DuckDBPyConnection,
+    where_clauses: List[str],
+    previous_hash: Optional[str] = None
+) -> Tuple[Optional[pd.DataFrame], str]:
+    """
+    Fetches filtered invoice metadata and stores it as a temp DuckDB table
+    only if the data has changed.
+
+    Parameters:
+        conn (DuckDBPyConnection): DuckDB connection object
+        where_clauses (List[str]): SQL filter clauses (artist, genre, country)
+        previous_hash (str, optional): Prior hash of InvoiceId set
+
+    Returns:
+        Tuple[Optional[pd.DataFrame], str]: DataFrame (or None if unchanged),
+        and the new hash signature.
+    """
+    log_msg("[SQL CORE] Running get_events_shared()")
 
     where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
@@ -39,4 +65,30 @@ def get_events_shared(conn: DuckDBPyConnection, where_clauses: List[str]) -> pd.
     """
 
     df = conn.execute(query).fetchdf()
-    return df.drop_duplicates(subset=["CustomerId", "InvoiceId", "dt"]).sort_values(["CustomerId", "dt"])
+    log_msg(f"     [SQL CORE] Raw query returned {len(df)} rows before deduplication.")
+
+    df_cleaned = (
+        df.drop_duplicates(subset=["CustomerId", "InvoiceId", "dt"])
+          .sort_values(["CustomerId", "dt"])
+    )
+
+    log_msg(f"     [SQL CORE] {len(df_cleaned)} cleaned rows across {df_cleaned['InvoiceId'].nunique()} invoices")
+
+    new_hash = hash_invoice_ids(df_cleaned)
+
+    if new_hash == previous_hash:
+        existing_tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
+        if "filtered_invoices" in existing_tables:
+            log_msg("     [SQL CORE] Skipping update: hash matched ({new_hash})")
+            return None, new_hash
+
+        log_msg("     [SQL CORE] Table missing — materializing filtered_invoices.")
+
+    conn.register("df_cleaned", df_cleaned)
+    conn.execute("CREATE OR REPLACE TEMP TABLE filtered_invoices AS SELECT * FROM df_cleaned")
+    conn.unregister("df_cleaned")
+
+    log_msg("     [SQL CORE] Temp table 'filtered_invoices' updated successfully")
+
+    return df_cleaned, new_hash
+
