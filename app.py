@@ -30,6 +30,7 @@ app = Dash(
     external_stylesheets=[dbc.themes.FLATLY, dbc.themes.DARKLY],
     suppress_callback_exceptions=True
 )
+server = app.server
 
 # Layout Wrapper
 def serve_layout():
