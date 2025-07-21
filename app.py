@@ -31,8 +31,6 @@ app = Dash(
     suppress_callback_exceptions=True
 )
 
-server = app.server
-
 # Layout Wrapper
 def serve_layout():
     return dmc.MantineProvider(
