@@ -24,6 +24,7 @@ def register_callbacks(app):
     @app.callback(
         Output("page-content", "children"),
         Output("current-page", "data"),
+        Output("page-content-loading", "data"),
         Input("main-tabs", "value"),
         State("theme-store", "data"),
         State("filter-date", "value"),
@@ -51,7 +52,7 @@ def register_callbacks(app):
         log_msg(f"     [CALLBACK:routing] Active filters → {filters}")
 
         layout_func = PAGE_MAP.get(tab_value, lambda: html.Div("404 Page Not Found"))
-        return layout_func(), tab_value
+        return layout_func(), tab_value, False
 
     @app.callback(
         Output("url", "pathname"),

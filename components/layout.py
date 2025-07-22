@@ -4,7 +4,7 @@ Application shell layout for the Chinook dashboard.
 Composes the AppShell with header, sidebar container, tabs, page content, and hidden filters.
 """
 
-from dash import html
+from dash import html, dcc
 import dash_mantine_components as dmc
 from components.header import make_header
 
@@ -50,6 +50,11 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, fil
                         ])
                     ],
                     mb="lg"
+                ),
+                dmc.LoadingOverlay(
+                    id = "page-content-overlay",
+                    visible = True,
+                    overlayProps = {"radius": "sm", "blur": 2, "color": "blue", "size":"md"}
                 ),
                 html.Div(id="page-content"),
                 html.Div(filter_block, style={"display": "none"})

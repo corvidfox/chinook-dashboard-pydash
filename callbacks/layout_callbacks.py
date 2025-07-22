@@ -22,6 +22,13 @@ FILTER_COMPONENTS = filters.make_filter_block(FILTER_META)
 
 def register_callbacks(app):
     @app.callback(
+    Output("page-content-overlay", "visible"),
+    Input("page-content-loading", "data")
+    )
+    def show_page_overlay(is_loading):
+        return is_loading
+
+    @app.callback(
         Output("main-layout", "children"),
         Input("navbar-state", "data"),
         Input("theme-store", "data"),

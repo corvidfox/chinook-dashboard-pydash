@@ -64,6 +64,8 @@ def serve_layout():
                     dcc.Store(id="navbar-state", data=INITIAL_NAVBAR_STATE),
                     dcc.Store(id="viewport-store", data={"width": 1024}),
                     dcc.Store(id="events-shared-fingerprint", data=""),
+                    dcc.Store(id="page-content-loading", data=True),
+
 
                     html.Div(id="viewport-trigger", style={"display": "none"}),
                     html.Div(id="dark-mode-log-trigger", style={"display": "none"}),
