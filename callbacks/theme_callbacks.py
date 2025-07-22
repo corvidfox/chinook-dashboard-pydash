@@ -3,11 +3,34 @@ Theme control callbacks for the Chinook dashboard.
 Handles light/dark mode detection, theme switching, and syncing AgGrid styling.
 """
 
-from dash import Input, Output, clientside_callback
+from dash import Input, Output, clientside_callback, ClientsideFunction, ALL
+from dash.exceptions import PreventUpdate
 from services.logging_utils import log_msg
-from config import DEFAULT_COLORSCHEME
+from config import DEFAULT_COLORSCHEME, get_mantine_theme
 
 def register_callbacks(app):
+    # Update the theme scheme
+    app.clientside_callback(
+        ClientsideFunction(namespace="theme", function_name="setScheme"),
+        Output("theme-store", "data"),
+        # Trigger once on init, and again on every header theme-switch.checked change
+        Input("theme-init-trigger", "n_intervals"),
+        Input({"type": "theme-switch", "role": ALL}, "checked"),
+    )
+
+    # Update mantine provider
+    @app.callback(
+        Output("mantine-provider", "theme"),
+        Input("theme-store", "data")
+    )
+    def _update_provider(theme_data):
+        """
+        Push theme updates to the mantine provider. 
+        """
+        if not theme_data or "color_scheme" not in theme_data:
+            raise PreventUpdate
+        return get_mantine_theme(theme_data["color_scheme"])
+
     # Sync AgGrid theme class with Mantine color scheme
     @app.callback(
         Output("grid-theme-store", "data"),
@@ -33,49 +56,3 @@ def register_callbacks(app):
         log_msg(f"[CALLBACK:theme] Sidebar summary table styled with → {theme_class}")
         return theme_class
 
-    @app.callback(
-    Output("dark-mode-log-trigger", "children"),
-    Input("preferred-dark-mode", "data")
-    )
-    def confirm_dark_mode_preference(prefers_dark):
-        """
-        Placeholder to check if the clientside callback to detect user preference for darkmode is activated.
-        """
-        log_msg(f"[CALLBACK:theme] Browser prefers dark mode: {prefers_dark}")
-        return None
-
-    @app.callback(
-        Output("theme-switch", "checked"),
-        Input("theme-store", "data"),
-        prevent_initial_call=True
-    )
-    def sync_theme_toggle(theme_data):
-        """
-        Ensure theme toggle matches active theme
-        """
-        if theme_data and "color_scheme" in theme_data:
-            return theme_data["color_scheme"] == "dark"
-        return False
-    
-    # Detect user's system preference for dark mode
-    app.clientside_callback(
-        """() => window.matchMedia("(prefers-color-scheme: dark)").matches""",
-        Output("preferred-dark-mode", "data"),
-        Input("theme-init-trigger", "n_intervals"),
-    )
-
-    # Master theme-store setter (switch override OR browser preference)
-    app.clientside_callback(
-        """
-        (switchOn, prefersDark) => {
-            const scheme = switchOn!==null
-            ? (switchOn ? "dark" : "light")
-            : (prefersDark ? "dark" : "light");
-            document.documentElement.setAttribute("data-mantine-color-scheme", scheme);
-            return { color_scheme: scheme };
-        }
-        """,
-        Output("theme-store", "data"),
-        Input("theme-switch", "checked"),
-        Input("preferred-dark-mode", "data")
-    )

@@ -69,7 +69,7 @@ def serve_layout():
                     html.Div(id="dark-mode-log-trigger", style={"display": "none"}),
 
                     # Dummy theme switch for load
-                    dmc.Switch(id="theme-switch", style={"display": "none"}),
+                    dmc.Switch(id={"type":"theme-switch", "role":"init"}, style={"display": "none"}),
 
                     # Main Layout Entry Placeholder
                     html.Div(id="main-layout")

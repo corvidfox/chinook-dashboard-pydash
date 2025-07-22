@@ -8,7 +8,7 @@ import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 
 
-def make_header(navbar_collapsed=False):
+def make_header(navbar_collapsed=False, scheme="light"):
     """
     Builds the AppShellHeader with title, burger icon, and theme switch.
 
@@ -28,8 +28,9 @@ def make_header(navbar_collapsed=False):
                 dmc.Burger(id="burger", opened=not navbar_collapsed),
                 dmc.Title("Chinook Music Retail Analytics Dashboard", order=2),
                 dmc.Switch(
-                    id="theme-switch",
+                    id={"type":"theme-switch", "role":"header"},
                     persistence=True,
+                    checked= (scheme== "dark"),
                     offLabel=DashIconify(icon="radix-icons:sun",  width=15),
                     onLabel=DashIconify(icon="radix-icons:moon", width=15)
                 )

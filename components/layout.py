@@ -30,7 +30,7 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, fil
         header={"height": 60},
         navbar={"width": 300, "breakpoint": "sm"},
         children=[
-            make_header(navbar_collapsed=navbar_state["collapsed"]["mobile"]),
+            make_header(navbar_collapsed=navbar_state["collapsed"]["mobile"], scheme = scheme),
 
             dmc.AppShellNavbar(id="navbar", children=[], style={}),
 
