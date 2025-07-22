@@ -15,20 +15,21 @@ from config import DEFAULT_COLORSCHEME, get_mantine_theme
 from services.db import get_connection
 from services.logging_utils import log_msg
 from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date, create_catalog_tables, check_catalog_tables
+from services.sql_core import get_events_shared
 from components import filters
 from components.layout import make_layout
 from components.sidebar import make_sidebar
-from pages import overview, coming_soon
 
 log_msg("[APP] Starting Chinook dashboard")
 
 env = os.getenv("DASH_ENV", "development").lower()
 log_msg(f"[APP] Booting dashboard in {env} mode")
 
-# Get connection and make genre/artist summary tables
+# Get connection, make genre/artist summary tables, make initial filtered data table
 conn = get_connection()
 create_catalog_tables(conn)
 check_catalog_tables(conn)
+get_events_shared(conn=conn,where_clauses=None)
 
 # App Metadata & State Initialization
 FILTER_META         = get_filter_metadata()
@@ -80,6 +81,9 @@ def serve_layout():
     )
 
 app.layout = html.Div(id = "shell", className = "nav-open", children=[serve_layout()])
+
+# Import pages
+from pages import overview, coming_soon
 
 # Global Callback Registration
 from callbacks.layout_callbacks import register_callbacks as register_layout_callbacks
