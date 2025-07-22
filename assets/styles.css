@@ -21,7 +21,7 @@ html, body, #mantine-provider {
 .mantine-AppShell-navbar,
 .mantine-AppShell-main {
   will-change: transform, margin-left;
-  transition: transform 0.3s ease, margin-left 0.3s ease;
+  transition: transform 0.6s ease, margin-left 0.6s ease;
 }
 
 /* OPEN: slide sidebar in & shift main on desktop */
