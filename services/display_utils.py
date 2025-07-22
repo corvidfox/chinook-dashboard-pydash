@@ -8,6 +8,8 @@ Includes:
 """
 
 import locale
+import numbers
+import math
 import country_converter as coco
 from typing import Union
 
@@ -49,8 +51,13 @@ def format_kpi_value(
     if value_type not in {"dollar", "percent", "number", "float", "country"}:
         raise ValueError(f"Unsupported value_type: {value_type}")
 
-    if value is None or (value_type != "country" and not isinstance(value, (int, float))):
-        return "NA"
+    # Handle missing or invalid numerics
+    if value_type != "country":
+        if value is None or not isinstance(value, numbers.Number) or math.isnan(value):
+            return "NA"
+    else:
+        if value is None:
+            return "NA"
 
     # Determine decimal places from accuracy
     try:
@@ -70,10 +77,16 @@ def format_kpi_value(
         return locale.format_string(f'%.{decimal_places}f', rounded, grouping=True)
 
     if value_type == "number":
-        rounded = round(value, decimal_places)
-        if decimal_places == 0:
-            return locale.format_string("%d", int(rounded), grouping=True)
-        return locale.format_string(f'%.{decimal_places}f', rounded, grouping=True)
+        # coerce to Python float for is_integer() check
+        float_val = float(value)
+        if float_val.is_integer():
+            # integer formatting
+            return locale.format_string("%d", int(float_val), grouping=True)
+        else:
+            # fractional → use decimal_places
+            rounded = round(float_val, decimal_places)
+            fmt = f"%.{decimal_places}f"
+            return locale.format_string(fmt, rounded, grouping=True)
 
     if value_type == "country":
         return flagify_country(str(value), label=label, label_type=label_type)
