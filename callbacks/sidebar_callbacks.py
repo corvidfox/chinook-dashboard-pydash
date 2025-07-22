@@ -17,16 +17,26 @@ log_msg("[CALLBACK:sidebar] Loaded static sidebar metadata")
 
 def register_callbacks(app):
     @app.callback(
-        Output("navbar-state", "data"),
+        [
+          Output("navbar-state", "data"),
+          Output("shell",         "className"),
+        ],
         Input("burger", "opened"),
-        State("navbar-state", "data")
+        State("navbar-state", "data"),
+        prevent_initial_call=True
     )
-    def toggle_navbar(opened, state):
+    def toggle_navbar(opened, current):
         """
         Updates navbar collapsed state from burger toggle.
         """
-        log_msg(f"[CALLBACK:sidebar] Burger toggled — collapsed state now {not opened}")
-        return {"collapsed": {"mobile": not opened, "desktop": not opened}}
+        collapsed = not opened
+        new_state = {"collapsed":{"mobile":collapsed, "desktop":collapsed}}
+
+        # CSS class to push/pull the shell
+        cls = "nav-closed" if collapsed else "nav-open"
+
+        log_msg(f"[CALLBACK:sidebar] Toggling shell → {cls}")
+        return new_state, cls
 
     @app.callback(
         Output("navbar", "collapsed"),
@@ -41,34 +51,14 @@ def register_callbacks(app):
     @app.callback(
         Output("navbar", "children"),
         Input("navbar-state", "data"),
-        Input("theme-store", "data"),
     )
-    def render_sidebar(nav_state, theme_data):
+    def render_sidebar(nav_state):
         """
-        Rebuilds sidebar content when theme or navbar state changes.
+        Rebuilds sidebar content when navbar state changes.
         """
-        scheme = theme_data["color_scheme"] if theme_data and "color_scheme" in theme_data else DEFAULT_COLORSCHEME
-        log_msg(f"[CALLBACK:sidebar] Rebuilding sidebar — theme: {scheme}")
-        log_msg(f"     [CALLBACK:sidebar] Sidebar content → filters={len(FILTER_META)}, metrics={len(SUMMARY_DF)}")
-        return make_sidebar(scheme, FILTER_META, SUMMARY_DF, LAST_UPDATED)
+        log_msg(f"[CALLBACK:sidebar] Rebuilding sidebar")
+        return make_sidebar(FILTER_META, SUMMARY_DF, LAST_UPDATED)
 
-    @app.callback(
-        Output("navbar", "style"),
-        Input("navbar-state", "data")
-    )
-    def collapse_navbar(navbar_state):
-        """
-        Animates sidebar width based on collapsed state.
-        """
-        collapsed = navbar_state["collapsed"]["mobile"]
-        log_msg(f"[CALLBACK:sidebar] Sidebar collapse status: {collapsed}")
-        return {
-            "width": 0 if collapsed else 300,
-            "overflow": "hidden",
-            "transition": "width 0.3s ease",
-            "backgroundColor": "var(--mantine-color-body)"
-        }
-    
     # Manipulates viewport styling based on sidebar logic
     app.clientside_callback(
         """

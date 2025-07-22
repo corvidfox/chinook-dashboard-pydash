@@ -53,6 +53,8 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, fil
                 ),
                 html.Div(id="page-content"),
                 html.Div(filter_block, style={"display": "none"})
-            ])
+            ], 
+            id = "main-container"
+            )
         ]
     )

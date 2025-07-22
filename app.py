@@ -77,7 +77,7 @@ def serve_layout():
         ]
     )
 
-app.layout = serve_layout
+app.layout = html.Div(id = "shell", className = "nav-open", children=[serve_layout()])
 
 # Global Callback Registration
 from callbacks.layout_callbacks import register_callbacks as register_layout_callbacks

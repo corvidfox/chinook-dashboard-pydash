@@ -10,3 +10,56 @@ body {
 table, th, td, a, p {
   color: var(--mantine-color-text);
 }
+
+/* Transition animation - make it smoother on theme changes */
+html, body, #mantine-provider {
+  transition: background-color 0.75s ease, color 0.6s ease;
+}
+
+/* ~~~ Slide & Reveal Sidebar ~~~ */
+/* GPU-accelerated transitions */
+.mantine-AppShell-navbar,
+.mantine-AppShell-main {
+  will-change: transform, margin-left;
+  transition: transform 0.3s ease, margin-left 0.3s ease;
+}
+
+/* OPEN: slide sidebar in & shift main on desktop */
+@media screen and (min-width: 768px) {
+  #shell.nav-open .mantine-AppShell-navbar {
+    transform: translateX(0);
+  }
+
+  #shell.nav-open .mantine-AppShell-main {
+    transform: translateX(0); /* width of sidebar */
+  }
+
+  #shell.nav-closed .mantine-AppShell-navbar {
+    transform: translateX(-300px);
+  }
+
+  #shell.nav-closed .mantine-AppShell-main {
+    margin-left: -300px;
+    transform: none;
+  }
+}
+
+/* MOBILE: show sidebar full-screen overlay */
+@media screen and (max-width: 767px) {
+  #shell.nav-open .mantine-AppShell-navbar {
+    transform: translateX(0);
+  }
+
+  #shell.nav-closed .mantine-AppShell-navbar {
+    transform: translateX(-100%);
+  }
+
+  .mantine-AppShell-header {
+    position: relative;
+    z-index: 1600;
+  }
+
+  body.nav-open {
+    overflow: hidden;
+  }
+}

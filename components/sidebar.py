@@ -85,12 +85,11 @@ def make_meta_row(
     )
 
 
-def make_sidebar(color_scheme, filter_meta, summary_df, last_updated):
+def make_sidebar(filter_meta, summary_df, last_updated):
     """
     Renders the full sidebar layout including filters, metadata, and summary table.
 
     Parameters:
-        color_scheme (str): Active Mantine color scheme.
         filter_meta (dict): Precomputed filter options.
         summary_df (pd.DataFrame): Aggregated summary metrics.
         last_updated (str): Last data refresh timestamp.
