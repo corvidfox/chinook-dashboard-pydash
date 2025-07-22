@@ -79,7 +79,7 @@ def get_events_shared(
     if new_hash == previous_hash:
         existing_tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
         if "filtered_invoices" in existing_tables:
-            log_msg("     [SQL CORE] Skipping update: hash matched ({new_hash})")
+            log_msg(f"     [SQL CORE] Skipping update: hash matched ({new_hash})")
             return None, new_hash
 
         log_msg("     [SQL CORE] Table missing — materializing filtered_invoices.")
