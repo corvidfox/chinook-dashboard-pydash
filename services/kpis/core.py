@@ -122,13 +122,25 @@ def get_subset_core_kpis(
         "purchases_num":           format_kpi_value(purchases, "number", accuracy=1),
         "cust_num":                format_kpi_value(customers, "number", accuracy=1),
         "cust_num_new":            format_kpi_value(new_customers, "number", accuracy=1),
-        "cust_per_new":            format_kpi_value(new_customers / customers, "percent"),
+        "cust_per_new":            format_kpi_value(
+            new_customers / customers if customers > 0 else None, 
+            "percent"
+            ),
         "tracks_sold_num":         format_kpi_value(int(row["tracks_sold"]), "number", accuracy=1),
         "revenue_total":           revenue,
         "revenue_total_fmt":       format_kpi_value(revenue, "dollar"),
-        "revenue_per_month":       format_kpi_value(revenue / num_months, "dollar"),
-        "revenue_per_cust":        format_kpi_value(revenue / customers, "dollar"),
-        "revenue_per_purchase":    format_kpi_value(revenue / purchases, "dollar"),
+        "revenue_per_month":       format_kpi_value(
+            revenue / num_months if num_months > 0 else None, 
+            "dollar"
+            ),
+        "revenue_per_cust":        format_kpi_value(
+            revenue / customers if customers > 0 else None, 
+            "dollar"
+            ),
+        "revenue_per_purchase":    format_kpi_value(
+            revenue / purchases if purchases > 0 else None, 
+            "dollar"
+            ),
         "genre_num":               format_kpi_value(int(row["num_genres"]), "number", accuracy=1),
         "artist_num":              format_kpi_value(int(row["num_artists"]), "number", accuracy=1),
         "country_num":             format_kpi_value(int(row["num_countries"]), "number", accuracy=1),
