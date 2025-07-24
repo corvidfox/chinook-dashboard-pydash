@@ -93,13 +93,11 @@ def register_callbacks(app):
         Input("events-shared-fingerprint",   "data"),
         Input("cohort-fingerprint",           "data"),
         State("date-range-store",             "data"),
-        State("metrics-store",                "data"),
         State("max-offset-store",             "data"),
         State("offsets-store",                "data"),
     )
     def update_retention_kpis(
-        events_hash, cohort_hash,
-        date_range, metrics, max_offset, offsets
+        events_hash, cohort_hash, date_range, max_offset, offsets
     ):
         """
         Compute or fetch cached shared KPIs, then extract retention KPIs.
@@ -114,7 +112,6 @@ def register_callbacks(app):
         bundle, kpi_hash = get_shared_kpis_cached(
             events_hash=events_hash,
             date_range=tuple(date_range),
-            metrics=tuple(metrics),
             max_offset=max_offset,
             offsets=tuple(offsets),
         )
