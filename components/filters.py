@@ -109,7 +109,7 @@ def artist_filter(filter_meta):
     )
 
 
-def metric_filter():
+def metric_filter(filter_meta):
     """
     Creates a Select dropdown for choosing a summary metric.
 
@@ -120,10 +120,7 @@ def metric_filter():
         label="Metric",
         id="filter-metric",
         value="revenue",
-        data=[
-            {"label": "Revenue (USD$)", "value": "revenue"},
-            {"label": "Number of Customers", "value": "num_cust"},
-        ],
+        data=[{"label": a["label"], "value": a["var_name"]} for a in filter_meta["metrics"]],
         w="100%",
         persistence=True,
         persistence_type="session"
@@ -162,6 +159,6 @@ def make_filter_block(filter_meta):
         country_filter(filter_meta),
         genre_filter(filter_meta),
         artist_filter(filter_meta),
-        metric_filter(),
+        metric_filter(filter_meta),
         clear_button()
     ], gap="sm")

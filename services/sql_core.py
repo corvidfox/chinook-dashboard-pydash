@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 from duckdb import DuckDBPyConnection
 import hashlib
 import pandas as pd
+import json
 from services.logging_utils import log_msg
 
 
@@ -27,6 +28,36 @@ def hash_invoice_ids(df: pd.DataFrame) -> str:
     serialized = ",".join(sorted_ids)
     return hashlib.md5(serialized.encode()).hexdigest()
 
+def hash_dataframe(df: pd.DataFrame) -> str:
+    """
+    Produce an MD5 fingerprint of a dataframe.
+    """
+    payload = df.to_csv(index=False).encode("utf8")
+    return hashlib.md5(payload).hexdigest()
+
+def hash_kpi_bundle(bundle: dict) -> str:
+    """
+    Produce an MD5 fingerprint of a KPI‐bundle dict, 
+    converting any DataFrames into JSON‐serializable dicts.
+    """
+    def _serialize(o):
+        # If it’s a DataFrame, turn it into an “orient=split” dict:
+        if isinstance(o, pd.DataFrame):
+            return o.to_dict(orient="split")
+
+        # Let the JSON module recurse into lists/dicts:
+        raise TypeError(
+            f"Object of type {o.__class__.__name__} is not JSON serializable"
+            )
+
+    # json.dumps will call _serialize() whenever it hits a DataFrame
+    payload = json.dumps(
+        bundle,
+        default=_serialize,
+        sort_keys=True,
+    ).encode("utf8")
+
+    return hashlib.md5(payload).hexdigest()
 
 def get_events_shared(
     conn: DuckDBPyConnection,
@@ -91,4 +122,3 @@ def get_events_shared(
     log_msg("     [SQL CORE] Temp table 'filtered_invoices' updated successfully")
 
     return df_cleaned, new_hash
-

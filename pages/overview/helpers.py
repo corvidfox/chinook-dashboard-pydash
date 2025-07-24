@@ -7,6 +7,7 @@ Includes:
 - get_invoices_details(): overview-specific SQL for invoice-level results
 - get_genre_catalog(): review the genre_catalog temp table from DuckDB
 - get_artist_catalog(): review the artist_catalog temp table from DuckDB
+- make_serializable(): makes KPI bundles JSON serializable
 """
 
 import pandas as pd
@@ -14,6 +15,18 @@ from duckdb import DuckDBPyConnection
 from services.db import get_connection
 from services.logging_utils import log_msg
 from services.sql_filters import apply_date_filter
+
+def make_serializable(obj):
+    """
+    Walks over the mixed JSON output of the KPI calls and converts to serializable
+    """
+    if isinstance(obj, pd.DataFrame):
+        return obj.to_dict('records')
+    if isinstance(obj, dict):
+        return {k: make_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [make_serializable(v) for v in obj]
+    return obj
 
 def get_invoices_details(conn: DuckDBPyConnection, date_range: list) -> pd.DataFrame:
     """

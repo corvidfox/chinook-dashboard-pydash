@@ -68,14 +68,15 @@ def get_filter_metadata() -> Dict[str, Any]:
     Fetches metadata required for dashboard filters.
 
     Extracts genre, country, artist names, and full dataset date range
-    in ISO format.
+    in ISO format. Static values for metric options.
 
     Returns:
         dict: {
             'genres': List[str],
             'countries': List[str],
             'artists': List[str],
-            'date_range': (str, str)
+            'date_range': (str, str),
+            'metrics': List[Dict]
         }
     """
     log_msg("[META] Fetching filter metadata from DuckDB.")
@@ -104,7 +105,11 @@ def get_filter_metadata() -> Dict[str, Any]:
         "genres": genres,
         "countries": countries,
         "artists": artists,
-        "date_range": (to_iso(date_min), to_iso(date_max))
+        "date_range": (to_iso(date_min), to_iso(date_max)),
+        "metrics": [
+            {"label": "Revenue (USD$)", "var_name": "revenue"},
+            {"label": "Number of Customers", "var_name": "num_customers"}
+            ]
     }
 
 
@@ -197,7 +202,6 @@ def create_catalog_tables(conn: DuckDBPyConnection) -> None:
 
     log_msg(f"     [DATA META - SQL] genre_catalog populated with {num_genres} rows")
     log_msg(f"     [DATA META - SQL] artist_catalog populated with {num_artists} rows")
-
 
 
 def check_catalog_tables(conn: DuckDBPyConnection) -> bool:

@@ -16,6 +16,7 @@ Functions:
 """
 
 from typing import List, Dict, Optional
+import numpy as np
 import pandas as pd
 from duckdb import DuckDBPyConnection
 
@@ -266,30 +267,59 @@ def get_retention_kpis(
     raw_kpis = {
         "num_cust": n_total,
         "num_new": n_new,
-        "pct_new": n_new / n_total,
+        "pct_new": n_new / n_total if n_total > 0 else None,
         "ret_n_any": n_repeat,
-        "ret_rate_any": n_repeat / n_total,
+        "ret_rate_any": n_repeat / n_total if n_total > 0 else None,
         "ret_n_return": n_ret,
-        "ret_rate_return": n_ret / (n_total - n_new),
+        "ret_rate_return": (
+            n_ret / (n_total - n_new) if (n_total - n_new) > 0 else None
+        ),
         "ret_n_conv": n_conv,
-        "ret_rate_conv": n_conv / n_new,
+        "ret_rate_conv": n_conv / n_new if n_new > 0 else None,
         "ret_n_window": n_rep_w,
-        "ret_rate_window": n_rep_w / n_total,
-        "avg_life_mo_tot": df["lifespan_mo_total"].mean(skipna=True),
-        "avg_life_mo_win": df["lifespan_mo_window"].mean(skipna=True),
-        "med_gap_life": df["gap_life"].median(skipna=True),
-        "med_gap_window": df["gap_window"].median(skipna=True),
-        "med_gap_winback": df["gap_winback"].median(skipna=True),
-        "med_gap_ret": df["gap_retention"].median(skipna=True),
-        "avg_gap_life": df["avg_gap_life"].mean(skipna=True),
-        "avg_gap_window": df["avg_gap_window"].mean(skipna=True),
-        "avg_gap_bound": df["avg_gap_bound"].mean(skipna=True),
+        "ret_rate_window": n_rep_w / n_total if n_total > 0 else None,
+        "avg_life_mo_tot": (
+            df["lifespan_mo_total"].dropna().mean()
+            if not df["lifespan_mo_total"].dropna().empty else None
+        ),
+        "avg_life_mo_win": (
+            df["lifespan_mo_window"].dropna().mean()
+            if not df["lifespan_mo_window"].dropna().empty else None
+        ),
+        "med_gap_life": (
+            df["gap_life"].dropna().median() 
+            if not df["gap_life"].dropna().empty else None
+        ),
+        "med_gap_window": (
+            df["gap_window"].dropna().median() 
+            if not df["gap_window"].dropna().empty else None
+        ),
+        "med_gap_winback": (
+            df["gap_winback"].dropna().median() 
+            if not df["gap_winback"].dropna().empty else None
+        ),
+        "med_gap_ret": (
+            df["gap_retention"].dropna().median() 
+            if not df["gap_retention"].dropna().empty else None
+        ),
+        "avg_gap_life": (
+            df["avg_gap_life"].dropna().median() 
+            if not df["avg_gap_life"].dropna().empty else None
+        ),
+        "avg_gap_window": (
+            df["avg_gap_window"].dropna().median() 
+            if not df["avg_gap_window"].dropna().empty else None
+        ),
+        "avg_gap_bound": (
+            df["avg_gap_bound"].dropna().median() 
+            if not df["avg_gap_bound"].dropna().empty else None
+        )
     }
 
     # Format KPIs
     kpis: Dict[str, str] = {}
     for key, val in raw_kpis.items():
-        if val is None:
+        if val is None or (isinstance(val,float) and np.isnan(val)):
             fmt_type = "number"  # fallback for NA
         # Explicit format for known types
         elif "pct" in key or "rate" in key:

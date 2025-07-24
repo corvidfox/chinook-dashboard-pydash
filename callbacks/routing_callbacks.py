@@ -26,33 +26,56 @@ def register_callbacks(app):
         Output("current-page", "data"),
         Output("page-content-loading", "data"),
         Input("main-tabs", "value"),
-        State("theme-store", "data"),
-        State("filter-date", "value"),
-        State("filter-country", "value"),
-        State("filter-genre", "value"),
-        State("filter-artist", "value"),
-        State("filter-metric", "value"),
+        State("events-shared-fingerprint", "data"),
+        State("date-range-store",          "data"),
+        State("max-offset-store",          "data"),
+        State("metric-store",             "data"),
+        State("metric-label-store",       "data"),
+        State("offsets-store",             "data"),
+        State("cohort-fingerprint",        "data"),
+        State("retention-cohort-data",     "data"),
+        State("kpis-fingerprint",          "data"),
+        State("retention-kpis-store",      "data"),
     )
-    def render_page(tab_value, theme_data, date_range, country, genre, artist, metric):
+    def render_page(
+        tab_value,
+        events_hash,
+        date_range,
+        max_offset,
+        metric_val,
+        metric_label,
+        offsets,
+        cohort_hash,
+        cohort_data,
+        kpis_hash,
+        kpis_store
+        ):
         if not tab_value:
             raise PreventUpdate
 
         if tab_value not in PAGE_MAP:
             log_msg(f"     [CALLBACK:routing] Invalid tab route: {tab_value}", level="warning")
 
-        filters = {
-            "date": date_range,
-            "country": country,
-            "genre": genre,
-            "artist": artist,
-            "metric": metric,
-        }
-
         log_msg(f"[CALLBACK:routing] Rendering page → {tab_value}")
-        log_msg(f"     [CALLBACK:routing] Active filters → {filters}")
 
-        layout_func = PAGE_MAP.get(tab_value, lambda: html.Div("404 Page Not Found"))
-        return layout_func(), tab_value, False
+        layout_func = PAGE_MAP.get(
+            tab_value, 
+            lambda **kwargs: html.Div("404")
+            )
+        
+        content = layout_func(
+            events_hash=events_hash,
+            date_range=date_range,
+            max_offset=max_offset,
+            metric_val=metric_val,
+            metric_label=metric_label,
+            offsets=offsets,
+            cohort_hash=cohort_hash,
+            cohort_data=cohort_data,
+            kpis_hash=kpis_hash,
+            kpis_store=kpis_store
+        )
+        return content, tab_value, False
 
     @app.callback(
         Output("url", "pathname"),

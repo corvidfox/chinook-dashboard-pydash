@@ -51,6 +51,9 @@ CACHE_PATH = "data/last_commit_cache.json"
 # Default color scheme
 DEFAULT_COLORSCHEME = "light"
 
+DEFAULT_OFFSETS     = [3, 6, 9]
+DEFAULT_MAX_OFFSET  = None
+
 # Responsive font sizing utility
 def responsive_font_size(width: int) -> str:
     """

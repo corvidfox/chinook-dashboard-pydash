@@ -1,59 +1,121 @@
 """
-data_callbacks.py
-
 Shared data computation callbacks for the Chinook dashboard.
-Handles fingerprint-aware reactivity for event-level filters.
-Materializes filtered invoice table in DuckDB if data changes.
 
-Responsibilities:
-- Compute filtered invoice table using artist, genre, and country
-- Store fingerprint hash to prevent unnecessary recomputation
-- Materialize temporary DuckDB table: 'filtered_invoices'
+- Updates filtered invoice table when filters change
+- Computes and caches retention cohort data
+- Computes and caches shared KPI bundles, including retention KPIs
 """
 
 from dash import Input, Output, State
 from dash.exceptions import PreventUpdate
-from services.logging_utils import log_msg
-from services.db import get_connection
-from services.sql_core import get_events_shared
-from services.sql_filters import form_where_clause
 
-# Register callbacks
+import pandas as pd
+
+from services.logging_utils import log_msg
+from services.sql_filters import form_where_clause
+from services.cached_funs import (
+    get_events_shared_cached,
+    get_retention_cohort_data_cached,
+    get_shared_kpis_cached
+)
+
+
 def register_callbacks(app):
+    """
+    Register Dash callbacks for data pipelines.
+
+    Callbacks:
+      - update_filtered_events
+      - update_retention_cohort
+      - update_retention_kpis
+    """
+
     @app.callback(
         Output("events-shared-fingerprint", "data"),
-        Input("filter-country", "value"),
-        Input("filter-genre", "value"),
-        Input("filter-artist", "value"),
-        State("events-shared-fingerprint", "data")
+        Input("filter-country",         "value"),
+        Input("filter-genre",           "value"),
+        Input("filter-artist",          "value"),
+        State("events-shared-fingerprint", "data"),
     )
-    def update_filtered_events(country, genre, artist, previous_hash):
+    def update_filtered_events(country, genre, artist, prev_hash):
         """
-        Updates filtered_invoices temp table in DuckDB if resulting data set changes.
-        Stores fingerprint hash in dcc.Store to control downstream reactivity.
-        """
-        log_msg("[CALLBACK:data] Triggered update_filtered_events() from filters")
-        log_msg(f"     [CALLBACK:data] Filter inputs → country={country}, genre={genre}, artist={artist}")
+        Materialize or skip filtered_invoices in DuckDB.
 
-        # Generate SQL WHERE clause using filter inputs
+        Triggers when any filter changes. Uses cached wrapper to
+        avoid rerunning identical SQL.
+        """
+        log_msg("[CALLBACK:data] update_filtered_events() start")
         where_clauses = form_where_clause(
-            country=country,
-            genre=genre,
-            artist=artist
+            country=country, genre=genre, artist=artist
+        )
+        log_msg(f"     Filters → {where_clauses}")
+
+        new_df, new_hash = get_events_shared_cached(
+            where_clauses=tuple(where_clauses), previous_hash=prev_hash
         )
 
-        log_msg(f"     [CALLBACK:data] WHERE clause → {where_clauses}")
-
-        # Establish DuckDB connection
-        conn = get_connection()
-
-        # Get filtered invoice events and updated hash
-        df, new_hash = get_events_shared(conn, where_clauses, previous_hash=previous_hash)
-
-        if df is None:
-            log_msg("     [CALLBACK:data] Data unchanged — skipping fingerprint update")
+        if new_df is None:
+            log_msg("     No change in filtered data, skipping update")
             raise PreventUpdate
-        else:
-            log_msg(f"     [CALLBACK:data] Filtered data updated → {len(df)} rows, hash={new_hash}")
 
+        log_msg(
+            f"     Filtered data updated: "
+            f"{len(new_df)} rows → hash={new_hash}"
+        )
         return new_hash
+
+    @app.callback(
+        Output("retention-cohort-data", "data"),
+        Output("cohort-fingerprint",       "data"),
+        Input("events-shared-fingerprint", "data"),
+        State("date-range-store",           "data"),
+        State("max-offset-store",           "data"),
+    )
+    def update_retention_cohort(fingerprint, date_range, max_offset):
+        """
+        Compute or fetch cached cohort retention DataFrame.
+
+        Triggers after filtered events update. Stores JSON records
+        for downstream graph callbacks.
+        """
+        if not fingerprint:
+            raise PreventUpdate
+
+        log_msg("[CALLBACK:data] update_retention_cohort() start")
+        df, cohort_hash = get_retention_cohort_data_cached(
+            date_range=tuple(date_range), max_offset=max_offset
+        )
+        return df.to_dict("records"), cohort_hash
+
+    @app.callback(
+        Output("retention-kpis-store",       "data"),
+        Output("kpis-fingerprint",           "data"),
+        Input("events-shared-fingerprint",   "data"),
+        Input("cohort-fingerprint",           "data"),
+        State("date-range-store",             "data"),
+        State("metrics-store",                "data"),
+        State("max-offset-store",             "data"),
+        State("offsets-store",                "data"),
+    )
+    def update_retention_kpis(
+        events_hash, cohort_hash,
+        date_range, metrics, max_offset, offsets
+    ):
+        """
+        Compute or fetch cached shared KPIs, then extract retention KPIs.
+
+        Triggers when filtered events or cohort data changes.
+        """
+        if not events_hash or not cohort_hash:
+            raise PreventUpdate
+
+        log_msg("[CALLBACK:data] update_retention_kpis() start")
+
+        bundle, kpi_hash = get_shared_kpis_cached(
+            events_hash=events_hash,
+            date_range=tuple(date_range),
+            metrics=tuple(metrics),
+            max_offset=max_offset,
+            offsets=tuple(offsets),
+        )
+        return bundle["retention_kpis"], kpi_hash
