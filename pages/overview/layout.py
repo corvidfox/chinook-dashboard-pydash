@@ -5,6 +5,7 @@ Overview tab layout — used for debugging
 
 from dash import html
 import dash_ag_grid as dag
+import dash_mantine_components as dmc
 
 def layout(
     events_hash=None,
@@ -27,10 +28,10 @@ def layout(
         html.Div(id="metric-display"),
 
         html.H4("Static KPIs (initial build)"),
-        html.Pre(id="static-kpi-json", style={"whiteSpace": "pre-wrap"}),
+        dmc.Code(id="static-kpi-json", block = True, children=[], style={"whiteSpace": "pre-wrap", "maxHeight": "300px", "overflowY": "auto"}),
 
         html.H4("Dynamic KPIs (recomputed)"),
-        html.Pre(id="dynamic-kpi-json", style={"whiteSpace": "pre-wrap"}),
+        dmc.Code(id="dynamic-kpi-json", block = True, children=[], style={"whiteSpace": "pre-wrap","maxHeight": "300px", "overflowY": "auto"}),
 
         html.H4("Filtered Events"),
         dag.AgGrid(

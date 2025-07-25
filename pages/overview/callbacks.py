@@ -6,13 +6,11 @@ import pandas as pd
 from pages.overview.helpers import (
     get_filtered_data,
     get_artist_catalog,
-    get_genre_catalog,
-    make_serializable
+    get_genre_catalog
     )
 from services.cached_funs import (
     get_shared_kpis_cached,
-    get_retention_cohort_data_cached,
-    get_events_shared_cached,
+    get_retention_cohort_data_cached
 )
 from services.metadata import get_filter_metadata
 from config import DEFAULT_OFFSETS, DEFAULT_MAX_OFFSET
@@ -58,7 +56,7 @@ def register_callbacks(app):
         Input("date-range-store", "data"),
         State("max-offset-store", "data"),
         State("offsets-store", "data"),
-        State("retention-kpis-store", "data")
+        State("static-kpis", "data")
     )
     def update_overview(
         events_hash,
@@ -79,14 +77,15 @@ def register_callbacks(app):
 
         metric_text = f"Metric {metric_value}: {metric_label}"
 
-        static_json = json.dumps(make_serializable(static_kpis), indent=2)
+        static_json = json.dumps(static_kpis, indent=2)
+
         dyn_bundle, dyn_hash = get_shared_kpis_cached(
             events_hash=events_hash,
             date_range=tuple(date_range),
             max_offset=max_offset or DEFAULT_MAX_OFFSET,
             offsets=tuple(offsets or DEFAULT_OFFSETS),
         )
-        dyn_json = json.dumps(make_serializable(dyn_bundle), indent=2)
+        dyn_json = json.dumps(dyn_bundle, indent=2)
 
         events_df, invoices_df = get_filtered_data(date_range)
 
