@@ -13,6 +13,7 @@ and cohort retention KPIs into a single nested payload.  It:
       metadata_kpis, topn (nested tables), and retention_kpis
 
 Functions:
+  make_serializable(obj)
   get_shared_kpis(conn, tbl, metrics, date_range, cohort_df, top_n, offsets) → Dict[str, Any]
 """
 
@@ -25,6 +26,18 @@ from services.display_utils import format_kpi_value
 from services.kpis.core import get_subset_core_kpis
 from services.kpis.group import get_group_kpis_full, topn_kpis_slice_topn, topn_kpis_format_display
 from services.kpis.retention import get_retention_kpis
+
+def make_serializable(obj):
+    """
+    Walks over the mixed JSON output of the KPI calls and converts to serializable
+    """
+    if isinstance(obj, pd.DataFrame):
+        return obj.to_dict('records')
+    if isinstance(obj, dict):
+        return {k: make_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [make_serializable(v) for v in obj]
+    return obj
 
 def get_shared_kpis(
     conn: DuckDBPyConnection,
@@ -95,8 +108,10 @@ def get_shared_kpis(
 
     log_msg("   [SQL - KPI PIPELINE] Shared KPI pipeline complete")
 
-    return {
+    kpi_data = {
         "metadata_kpis":  metadata_kpis,
         "topn":           topn_by_group,
         "retention_kpis": retention_kpis
     }
+
+    return make_serializable(kpi_data)
