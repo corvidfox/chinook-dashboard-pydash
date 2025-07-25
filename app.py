@@ -184,10 +184,11 @@ register_data_callbacks(app)
 log_msg("[APP] Registered all core callbacks successfully")
 
 # Import Pages 
-from pages import overview, coming_soon
+from pages import timeseries, overview, coming_soon
 
 # Page-Specific Callback Registration
 overview.register_callbacks(app)
+timeseries.register_callbacks(app)
 
 log_msg("[APP] Registered all page-specific callbacks successfully")
 

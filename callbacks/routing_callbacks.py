@@ -7,15 +7,15 @@ from dash import Input, Output, State, html
 from dash.exceptions import PreventUpdate
 from services.logging_utils import log_msg
 
-from pages import overview, coming_soon
+from pages import timeseries, overview, coming_soon
 
 # Page map for routing tabs to layouts
 PAGE_MAP = {
     "/": overview.layout,
-    "/time-series": coming_soon.layout,
+    "/time-series": timeseries.layout,
     "/geo": coming_soon.layout,
-    "/by-genre": coming_soon.layout,
-    "/by-artist": coming_soon.layout,
+    "/bygenre": coming_soon.layout,
+    "/byartist": coming_soon.layout,
     "/retention": coming_soon.layout,
     "/insights": coming_soon.layout,
 }
