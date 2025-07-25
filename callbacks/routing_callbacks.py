@@ -29,13 +29,13 @@ def register_callbacks(app):
         State("events-shared-fingerprint", "data"),
         State("date-range-store",          "data"),
         State("max-offset-store",          "data"),
-        State("metric-store",             "data"),
-        State("metric-label-store",       "data"),
+        State("metric-store",              "data"),
+        State("metric-label-store",        "data"),
         State("offsets-store",             "data"),
         State("cohort-fingerprint",        "data"),
         State("retention-cohort-data",     "data"),
         State("kpis-fingerprint",          "data"),
-        State("retention-kpis-store",      "data"),
+        State("static-kpis",               "data"),
     )
     def render_page(
         tab_value,

@@ -5,7 +5,7 @@ Reusable SQL queries that support cross-page data features like event stream.
 Includes fingerprint-aware event filtering.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from duckdb import DuckDBPyConnection
 import hashlib
 import pandas as pd
@@ -63,10 +63,10 @@ def get_events_shared(
     conn: DuckDBPyConnection,
     where_clauses: List[str],
     previous_hash: Optional[str] = None
-) -> Tuple[Optional[pd.DataFrame], str]:
+) -> str:
     """
-    Fetches filtered invoice metadata and stores it as a temp DuckDB table
-    only if the data has changed.
+    Fetches filtered invoice metadata and stores it as a temp DuckDB table only
+    if the hash has changed.
 
     Parameters:
         conn (DuckDBPyConnection): DuckDB connection object
@@ -96,14 +96,18 @@ def get_events_shared(
     """
 
     df = conn.execute(query).fetchdf()
-    log_msg(f"     [SQL CORE] Raw query returned {len(df)} rows before deduplication.")
+    log_msg(
+        f"     [SQL CORE] Raw query returned {len(df)} rows before deduplication."
+        )
 
     df_cleaned = (
         df.drop_duplicates(subset=["CustomerId", "InvoiceId", "dt"])
           .sort_values(["CustomerId", "dt"])
     )
 
-    log_msg(f"     [SQL CORE] {len(df_cleaned)} cleaned rows across {df_cleaned['InvoiceId'].nunique()} invoices")
+    log_msg(
+        f"     [SQL CORE] {len(df_cleaned)} cleaned rows across {df_cleaned['InvoiceId'].nunique()} invoices"
+        )
 
     new_hash = hash_invoice_ids(df_cleaned)
 
@@ -121,4 +125,4 @@ def get_events_shared(
 
     log_msg("     [SQL CORE] Temp table 'filtered_invoices' updated successfully")
 
-    return df_cleaned, new_hash
+    return new_hash

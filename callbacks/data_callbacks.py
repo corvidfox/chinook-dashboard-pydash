@@ -11,10 +11,11 @@ from dash.exceptions import PreventUpdate
 
 import pandas as pd
 
+from services.db import get_connection
 from services.logging_utils import log_msg
+from services.sql_core import get_events_shared
 from services.sql_filters import form_where_clause
 from services.cached_funs import (
-    get_events_shared_cached,
     get_retention_cohort_data_cached,
     get_shared_kpis_cached
 )
@@ -50,17 +51,18 @@ def register_callbacks(app):
         )
         log_msg(f"     Filters → {where_clauses}")
 
-        new_df, new_hash = get_events_shared_cached(
-            where_clauses=tuple(where_clauses), previous_hash=prev_hash
+        new_hash = get_events_shared(
+            conn = get_connection(),
+            where_clauses=tuple(where_clauses), 
+            previous_hash=prev_hash
         )
 
-        if new_df is None:
+        if new_hash == prev_hash:
             log_msg("     No change in filtered data, skipping update")
             raise PreventUpdate
 
         log_msg(
-            f"     Filtered data updated: "
-            f"{len(new_df)} rows → hash={new_hash}"
+            f"     Filtered data updated: new hash = {new_hash}"
         )
         return new_hash
 
@@ -88,7 +90,6 @@ def register_callbacks(app):
         return df.to_dict("records"), cohort_hash
 
     @app.callback(
-        Output("retention-kpis-store",       "data"),
         Output("kpis-fingerprint",           "data"),
         Input("events-shared-fingerprint",   "data"),
         Input("cohort-fingerprint",           "data"),
@@ -96,18 +97,18 @@ def register_callbacks(app):
         State("max-offset-store",             "data"),
         State("offsets-store",                "data"),
     )
-    def update_retention_kpis(
+    def update_dynamic_kpis(
         events_hash, cohort_hash, date_range, max_offset, offsets
     ):
         """
-        Compute or fetch cached shared KPIs, then extract retention KPIs.
+        Compute or fetch cached shared KPIs.
 
         Triggers when filtered events or cohort data changes.
         """
         if not events_hash or not cohort_hash:
             raise PreventUpdate
 
-        log_msg("[CALLBACK:data] update_retention_kpis() start")
+        log_msg("[CALLBACK:data] update_kpis() start")
 
         bundle, kpi_hash = get_shared_kpis_cached(
             events_hash=events_hash,
@@ -115,4 +116,4 @@ def register_callbacks(app):
             max_offset=max_offset,
             offsets=tuple(offsets),
         )
-        return bundle["retention_kpis"], kpi_hash
+        return kpi_hash

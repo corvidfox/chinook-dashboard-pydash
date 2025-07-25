@@ -2,7 +2,6 @@
 Cached wrappers for core service functions.
 
 This module provides memoized versions of:
-  - get_events_shared
   - get_retention_cohort_data
   - get_shared_kpis
 
@@ -15,7 +14,6 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 import pandas as pd
 from services.cache_config import cache
 from services.db import get_connection
-from services.sql_core import get_events_shared as _get_events_shared
 from services.sql_core import hash_dataframe, hash_kpi_bundle
 from services.kpis.shared import get_shared_kpis as _get_shared_kpis
 from services.kpis.retention import get_retention_cohort_data as \
@@ -24,29 +22,6 @@ from services.metadata import get_filter_metadata
 
 FILTER_META = get_filter_metadata()
 METRICS_DICT = FILTER_META["metrics"]
-
-@cache.memoize()
-def get_events_shared_cached(
-    where_clauses: Tuple[str, ...],
-    previous_hash: Optional[str]
-) -> Tuple[Optional[pd.DataFrame], str]:
-    """
-    Fetch filtered events and cache the result.
-
-    Parameters:
-        where_clauses: Tuple of SQL WHERE clauses (must be hashable).
-        previous_hash: Prior hash of the invoice set (or None).
-
-    Returns:
-        (DataFrame or None, new_hash) as in get_events_shared.
-    """
-    conn = get_connection()
-    return _get_events_shared(
-        conn=conn,
-        where_clauses=list(where_clauses),
-        previous_hash=previous_hash,
-    )
-
 
 @cache.memoize()
 def get_retention_cohort_data_cached(

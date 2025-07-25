@@ -70,13 +70,13 @@ cache.init_app(
 
 # Import Memoized Wrappers
 from services.cached_funs import (
-    get_events_shared_cached,
     get_retention_cohort_data_cached,
     get_shared_kpis_cached
 )
 
 # Materalize the "no-filter" invoices table, grab hash
-_, initial_events_hash = get_events_shared_cached(
+initial_events_hash = get_events_shared(
+    conn = conn,
     where_clauses=(),
     previous_hash=None,
 )
@@ -140,10 +140,7 @@ def serve_layout():
                     dcc.Store(id="offsets-store", data=DEFAULT_OFFSETS),
                     dcc.Store(id="retention-cohort-data", data=[]),
                     dcc.Store(id="cohort-fingerprint", data=""),
-                    dcc.Store(
-                        id="retention-kpis-store", 
-                        data=static_bundle["retention_kpis"]
-                        ),
+                    dcc.Store(id="static-kpis", data=static_bundle),
                     dcc.Store(id="kpis-fingerprint", data=static_kpis_hash),
 
                     # Dummy elements to set off triggered initialization events
