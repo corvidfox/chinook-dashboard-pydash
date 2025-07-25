@@ -68,6 +68,10 @@ def get_shared_kpis(
     metadata_kpis = get_subset_core_kpis(conn, date_range)
     log_msg("   [SQL - KPI PIPELINE] Retrieved subset metadata KPIs")
 
+    if metadata_kpis == {}:
+        log_msg("   [SQL - KPI PIPELINE] 0 Invoices, returning empty.")
+        return {}
+    
     # 2) Top-N group slices
     topn_by_group: Dict[str, Dict[str, Any]] = {}
     for group in ["Genre", "Artist", "BillingCountry"]:
@@ -86,12 +90,10 @@ def get_shared_kpis(
             )
             group_tables[var] = formatted
 
+        group = "country" if group == "BillingCountry" else group
         # add total distinct values for this group
         num_key = f"{group.lower()}_num"
-        group_tables["num_vals"] = format_kpi_value(
-            metadata_kpis.get(num_key, 0),
-            value_type="number"
-        )
+        group_tables["num_vals"] = metadata_kpis.get(num_key, "NA")
 
         topn_by_group[f"topn_{group.lower()}"] = group_tables
 

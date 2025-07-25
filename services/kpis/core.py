@@ -49,6 +49,17 @@ def get_subset_core_kpis(
     end   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
     num_months = (end.year - start.year) * 12 + (end.month - start.month) + 1
 
+    check_sql = f"""
+    SELECT COUNT(*) AS num_rows
+    FROM filtered_invoices
+    WHERE DATE(dt) BETWEEN DATE('{start}') AND DATE('{end}');
+    """
+
+    count_df = conn.execute(check_sql).df()
+    if count_df.iloc[0]["num_rows"] == 0:
+        log_msg("[SQL - KPIs] filtered_invoices is empty for that date range.")
+        return {}
+
     sql = f"""
     WITH
       date_filtered AS (
@@ -105,10 +116,6 @@ def get_subset_core_kpis(
     """
 
     df = conn.execute(sql).df()
-
-    if df.empty:
-        log_msg("[SQL - KPIs] No data returned for that date range.")
-        return {}
 
     row = df.iloc[0]
 
