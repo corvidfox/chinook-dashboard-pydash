@@ -58,7 +58,9 @@ def format_kpi_value(
 
     # Handle missing or invalid numerics
     if value_type != "country":
-        if value is None or not isinstance(value, numbers.Number) or math.isnan(value):
+        if value is None or not (
+            isinstance(value, numbers.Number) or math.isnan(value)
+            ):
             return "NA"
     else:
         if value is None:
@@ -116,7 +118,11 @@ def standardize_country_to_iso3(input_str: str) -> Union[str, None]:
     return iso3 if iso3 != "not found" else None
 
 
-def flagify_country(input_str: str, label: bool = False, label_type: str = "name") -> str:
+def flagify_country(
+        input_str: str, 
+        label: bool = False, 
+        label_type: str = "name"
+        ) -> str:
     """
     Creates a country flag emoji string based on input.
 
@@ -142,8 +148,13 @@ def flagify_country(input_str: str, label: bool = False, label_type: str = "name
     if not label:
         return flag
 
-    label_text = coco.convert(names=iso2, to="name_short" if label_type == "name" else "ISO3")
-    return f"{flag} {label_text}" if label_text and label_text != "not found" else flag
+    label_text = coco.convert(
+        names=iso2, 
+        to="name_short" if label_type == "name" else "ISO3"
+        )
+    return f"{flag} {label_text}" if (
+        label_text and label_text != "not found"
+        ) else flag
 
 # services/kpi_utils.py %%%
 
@@ -163,7 +174,9 @@ def safe_kpi_entry(
     Return a KPI entry dict.  
     Falls back to "No data available" for None, empty string, or NaN.
     """
-    if value is None or value == "" or (isinstance(value, float) and pd.isna(value)):
+    if value is None or value == "" or (
+        isinstance(value, float) and pd.isna(value)
+        ):
         display = "No data available"
     else:
         display = value
@@ -181,7 +194,12 @@ def _build_kpi_list(kpis: List[Dict[str, Any]]) -> html.Ul:
             html.Span(str(k["value"]))
         ])
         if k.get("tooltip"):
-            line = dmc.Tooltip(line, label=k["tooltip"], withArrow=True, position="top")
+            line = dmc.Tooltip(
+                line,
+                label=k["tooltip"], 
+                withArrow=True, 
+                position="top"
+                )
         items.append(html.Li(line, className="kpi-list-item"))
 
     return html.Ul(items, className="kpi-list")
@@ -217,25 +235,42 @@ def safe_kpi_card(
         try:
             log_msg(f"[DISPLAY UTILS] - attempting to pull icon: {icon}")
             header_children = [
-                DashIconify(icon = icon, width = 20, height = 20),
-                dmc.Text(title, fw=700, size="md")
+                DashIconify(icon = icon, inline=True, width = 20, height = 20),
+                dmc.Text(title, fw=700, size="md", span=True)
             ]
         except Exception:
             log_msg(f"  [DISPLAY UTILS] - Invalid icon: {icon}")
             header_children = [
-                dmc.Text(title, fw=700, size="md", span=True)
+                dmc.Text(title, fw=700, size="md")
             ]
     else:
         header_children = [
                 dmc.Text(title, fw=700, size="md")
             ]
 
-    header = dmc.CardSection(
-        dmc.Group(header_children, gap="xs", align="center", style={"width": "100%"}),
-        className="kpi-card-header",
-    )
+    header_children = dmc.Group(
+                header_children, 
+                gap="xs", 
+                align="center", 
+                wrap = True
+            )
+
     if tooltip:
-        header = dmc.Tooltip(header, label=tooltip, withArrow=True, position="top")
+        header_children = dmc.Tooltip(
+            header_children, 
+            label=tooltip, 
+            withArrow=True, 
+            position="top"
+            )
+
+    header = dmc.CardSection(
+        html.Div(
+            header_children,
+        className="kpi-card-header"
+        ),
+        style={"padding": 0},
+        className="kpi-card-header-wrapper"
+    )
 
     # Body section
     if not entries:

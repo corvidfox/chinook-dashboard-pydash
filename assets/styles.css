@@ -70,12 +70,16 @@ html, body, #mantine-provider {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
 }
 
 /* Full-width header, primary background, theme text + icon, small bottom margin */
 .kpi-card-header {
   width: 100%;
-  background-color: var(--mantine-color-primary-filled);
+  display: flex; 
+  flex-wrap: wrap;
+  align-items: center;
+  background-color: var(--mantine-color-primary-filled); 
   color: var(--mantine-color-text);
   padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
   box-shadow: var(--mantine-shadow-sm);
@@ -91,18 +95,10 @@ html, body, #mantine-provider {
 
 /* KPI list styling */
 .kpi-list {
-  list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0.5rem;
 }
 
 .kpi-list-item {
   margin-bottom: 0.5rem;
-  font-size: var(--mantine-font-size-sm);
-}
-
-/* Give an icon some breathing room, inline with title */
-.kpi-card-icon {
-  display: inline-flex;
-  align-items: center;
 }
