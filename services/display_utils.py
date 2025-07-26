@@ -11,8 +11,13 @@ import locale
 import numbers
 import math
 import country_converter as coco
-from typing import Union
+import pandas as pd
+from typing import Union, List, Dict, Any, Callable, Optional
+from dash import html
+from dash_iconify import DashIconify
+import dash_mantine_components as dmc
 
+from services.logging_utils import log_msg
 
 # Set system locale for number formatting (fallback to default)
 try:
@@ -139,3 +144,114 @@ def flagify_country(input_str: str, label: bool = False, label_type: str = "name
 
     label_text = coco.convert(names=iso2, to="name_short" if label_type == "name" else "ISO3")
     return f"{flag} {label_text}" if label_text and label_text != "not found" else flag
+
+# services/kpi_utils.py %%%
+
+from typing import Any, Callable, Dict, List, Optional
+from dash import html
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
+import pandas as pd
+
+
+def safe_kpi_entry(
+    label: str,
+    value: Any,
+    tooltip: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Return a KPI entry dict.  
+    Falls back to "No data available" for None, empty string, or NaN.
+    """
+    if value is None or value == "" or (isinstance(value, float) and pd.isna(value)):
+        display = "No data available"
+    else:
+        display = value
+
+    return {"label": label, "value": display, "tooltip": tooltip}
+
+def _build_kpi_list(kpis: List[Dict[str, Any]]) -> html.Ul:
+    """
+    Convert a list of KPI dicts into an HTML <ul> with styled <li> items.
+    """
+    items = []
+    for k in kpis:
+        line = html.Span([
+            html.Strong(f"{k['label']}: "),
+            html.Span(str(k["value"]))
+        ])
+        if k.get("tooltip"):
+            line = dmc.Tooltip(line, label=k["tooltip"], withArrow=True, position="top")
+        items.append(html.Li(line, className="kpi-list-item"))
+
+    return html.Ul(items, className="kpi-list")
+
+
+def safe_kpi_card(
+    kpi_bundle: Dict[str, Any],
+    body_fn: Callable[[], List[Dict[str, Any]]],
+    title: str,
+    icon: Optional[str] = None,
+    tooltip: Optional[str] = None
+) -> dmc.Card:
+    """
+    Render a KPI card with a header and body.
+
+    Args:
+        kpi_bundle: Used only to detect "no data" when empty.
+        body_fn:   Returns a list of KPI dicts (label/value/tooltip).
+        title:     Header text.
+        icon:      String name for DashIconify (e.g. "mdi:chart-line").
+        tooltip:   Optional hover tooltip for the header.
+
+    Returns:
+        A styled dmc.Card that obeys light/dark theming.
+    """
+    # Check if data is present
+    has_data = bool(kpi_bundle and callable(body_fn) and body_fn())
+    entries = body_fn() if has_data else []
+
+    # Header section
+    header_children: List[Any] = []
+    if icon:
+        try:
+            log_msg(f"[DISPLAY UTILS] - attempting to pull icon: {icon}")
+            header_children = [
+                DashIconify(icon = icon, width = 20, height = 20),
+                dmc.Text(title, fw=700, size="md")
+            ]
+        except Exception:
+            log_msg(f"  [DISPLAY UTILS] - Invalid icon: {icon}")
+            header_children = [
+                dmc.Text(title, fw=700, size="md", span=True)
+            ]
+    else:
+        header_children = [
+                dmc.Text(title, fw=700, size="md")
+            ]
+
+    header = dmc.CardSection(
+        dmc.Group(header_children, gap="xs", align="center", style={"width": "100%"}),
+        className="kpi-card-header",
+    )
+    if tooltip:
+        header = dmc.Tooltip(header, label=tooltip, withArrow=True, position="top")
+
+    # Body section
+    if not entries:
+        # single centered line when no KPIs
+        body_content = dmc.Text("No data available.", ta="center")
+    else:
+        body_content = _build_kpi_list(entries)
+
+    body = dmc.CardSection(body_content, className="kpi-card-body")
+
+    # Full card
+    return dmc.Card(
+        children=[header, body],
+        className="kpi-card",
+        shadow="sm",
+        radius="md",
+        withBorder=True,
+        style = {"width": "100%"}
+    )

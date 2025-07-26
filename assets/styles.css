@@ -63,3 +63,46 @@ html, body, #mantine-provider {
     overflow: hidden;
   }
 }
+
+/* KPI CARDS */
+/* Ensure cards fill grid cells and stack header/body */
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Full-width header, primary background, theme text + icon, small bottom margin */
+.kpi-card-header {
+  width: 100%;
+  background-color: var(--mantine-color-primary-filled);
+  color: var(--mantine-color-text);
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  box-shadow: var(--mantine-shadow-sm);
+  margin-bottom: var(--mantine-spacing-xs);
+}
+
+/* Body grows to fill remaining space */
+.kpi-card-body {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+  flex: 1;
+  text-align: left;
+}
+
+/* KPI list styling */
+.kpi-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.kpi-list-item {
+  margin-bottom: 0.5rem;
+  font-size: var(--mantine-font-size-sm);
+}
+
+/* Give an icon some breathing room, inline with title */
+.kpi-card-icon {
+  display: inline-flex;
+  align-items: center;
+}

@@ -90,6 +90,7 @@ def register_callbacks(app):
         return df.to_dict("records"), cohort_hash
 
     @app.callback(
+        Output("kpis-store",                 "data"),
         Output("kpis-fingerprint",           "data"),
         Input("events-shared-fingerprint",   "data"),
         Input("cohort-fingerprint",           "data"),
@@ -116,4 +117,4 @@ def register_callbacks(app):
             max_offset=max_offset,
             offsets=tuple(offsets),
         )
-        return kpi_hash
+        return bundle, kpi_hash

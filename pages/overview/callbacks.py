@@ -50,6 +50,7 @@ def register_callbacks(app):
         Output("artist-catalog", "rowData"),
 
         Input("events-shared-fingerprint", "data"),
+        Input("kpis-store", "data"),
         Input("kpis-fingerprint", "data"),
         Input("metric-store", "data"),
         Input("metric-label-store", "data"),
@@ -60,6 +61,7 @@ def register_callbacks(app):
     )
     def update_overview(
         events_hash,
+        dynamic_kpis,
         dynamic_kpi_hash,
         metric_value,
         metric_label,
@@ -74,18 +76,10 @@ def register_callbacks(app):
         log_msg("[DEBUGGING] - Callback active.")
 
         dr_text = f"{date_range[0]}  →  {date_range[1]}"
-
         metric_text = f"Metric {metric_value}: {metric_label}"
 
         static_json = json.dumps(static_kpis, indent=2)
-
-        dyn_bundle, dyn_hash = get_shared_kpis_cached(
-            events_hash=events_hash,
-            date_range=tuple(date_range),
-            max_offset=max_offset or DEFAULT_MAX_OFFSET,
-            offsets=tuple(offsets or DEFAULT_OFFSETS),
-        )
-        dyn_json = json.dumps(dyn_bundle, indent=2)
+        dyn_json = json.dumps(dynamic_kpis, indent=2)
 
         events_df, invoices_df = get_filtered_data(date_range)
 

@@ -141,6 +141,7 @@ def serve_layout():
                     dcc.Store(id="retention-cohort-data", data=[]),
                     dcc.Store(id="cohort-fingerprint", data=""),
                     dcc.Store(id="static-kpis", data=static_bundle),
+                    dcc.Store(id="kpis-store", data=static_bundle),
                     dcc.Store(id="kpis-fingerprint", data=static_kpis_hash),
 
                     # Dummy elements to set off triggered initialization events
