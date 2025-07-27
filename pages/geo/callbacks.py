@@ -158,57 +158,6 @@ def register_callbacks(app: Dash) -> None:
         )
 
         return [top_countries, revenue_share, customers]
-
-    @app.callback(
-        Output("geo-metric-plot", "figure"),
-        Input("events-shared-fingerprint", "data"),
-        Input("metric-store", "data"),
-        Input("metric-label-store", "data"),
-        Input("date-range-store", "data"),
-        Input("theme-store", "data"),
-    )
-    def render_geo_plot(
-        events_hash: str,
-        metric_value: str,
-        metric_label: str,
-        date_range: Tuple[str, str],
-        theme_style: Dict[str, Any],
-    ) -> go.Figure:
-        if not events_hash or not metric_value:
-            raise PreventUpdate
-
-        # Mantine‐themed Plotly settings
-        theme_data = get_mantine_theme(theme_style["color_scheme"])
-        theme_info = {
-            "template": theme_data.get("plotlyTemplate", "plotly_white"),
-            "fontFamily": theme_data.get("fontFamily", "Inter"),
-        }
-
-        # Load yearly + aggregate (“All”) data
-        df_yearly, df_aggregate = get_geo_metrics_cached(events_hash, date_range)
-
-        # Ensure the yearly slice is strings and tag aggregate with "All"
-        df_yearly["year"] = df_yearly["year"].astype(str)
-        df_aggregate = df_aggregate.assign(year="All")
-
-        # Combine both DataFrames
-        df = pd.concat([df_yearly, df_aggregate], ignore_index=True)
-
-        # Standardize to ISO3, drop only invalid ISO rows
-        df["iso_alpha"] = df["country"].apply(standardize_country_to_iso3)
-        df = df.dropna(subset=["iso_alpha"])
-
-        # Order years, putting "All" last
-        years = sorted([y for y in df["year"].unique() if y != "All"]) + ["All"]
-        df["year"] = pd.Categorical(df["year"], categories=years, ordered=True)
-
-        # Build and return the animated choropleth
-        return build_geo_plot(
-            df,
-            {"var_name": metric_value, "label": metric_label},
-            theme_info
-        )
-
     
     @app.callback(
         Output("download-geo-csv", "data"),
@@ -271,3 +220,68 @@ def register_callbacks(app: Dash) -> None:
             style    = {}
 
         return disabled, label, style
+    
+    """
+    @app.callback(
+        Output("geo-metric-plot", "figure"),
+        Input("events-shared-fingerprint", "data"),
+        Input("metric-store", "data"),
+        Input("metric-label-store", "data"),
+        Input("date-range-store", "data"),
+        Input("theme-store", "data"),
+    )
+    def render_geo_plot(
+        events_hash: str,
+        metric_value: str,
+        metric_label: str,
+        date_range: Tuple[str, str],
+        theme_style: Dict[str, Any],
+    ) -> go.Figure:
+        if not events_hash or not metric_value:
+            raise PreventUpdate
+
+        # Mantine‐themed Plotly settings
+        theme_data = get_mantine_theme(theme_style["color_scheme"])
+        theme_info = {
+            "template": theme_data.get("plotlyTemplate", "plotly_white"),
+            "fontFamily": theme_data.get("fontFamily", "Inter"),
+        }
+
+        # Load yearly + aggregate (“All”) data
+        df_yearly, df_aggregate = get_geo_metrics_cached(events_hash, date_range)
+
+        log_msg(f"     [CALLBACK:geo] PLOTTER: Geo Table Rows = {len(df_yearly)}")
+
+        log_msg(f"Yearly years before anything else: {df_yearly['year'].unique().tolist()}")
+
+        if "year" not in df_yearly.columns:
+            log_msg("⚠️ WARNING: 'year' column not found in df_yearly. Renaming?")
+            if "Year" in df_yearly.columns:
+                df_yearly = df_yearly.rename(columns={"Year": "year"})
+
+        # Ensure the yearly slice is strings and tag aggregate with "All"
+        df_yearly["year"] = df_yearly["year"].astype(str)
+        df_aggregate = df_aggregate.assign(year="All")
+
+        log_msg(f"Original yearly year values: {df_yearly['year'].unique().tolist()}")
+
+        # Combine both DataFrames
+        df = pd.concat([df_yearly, df_aggregate], ignore_index=True)
+
+        log_msg(f"Combined raw year values: {df['year'].unique().tolist()}")
+
+        # Standardize to ISO3, drop only invalid ISO rows
+        df["iso_alpha"] = df["country"].apply(standardize_country_to_iso3)
+        df = df.dropna(subset=["iso_alpha"])
+
+        # Order years, putting "All" last
+        years = sorted([y for y in df["year"].unique() if y != "All"]) + ["All"]
+        df["year"] = pd.Categorical(df["year"], categories=years, ordered=True)
+
+        # Build and return the animated choropleth
+        return build_geo_plot(
+            df,
+            {"var_name": metric_value, "label": metric_label},
+            theme_info
+        )
+"""

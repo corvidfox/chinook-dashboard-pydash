@@ -13,6 +13,8 @@ Functions:
 from typing import Tuple, Dict, List
 from duckdb import DuckDBPyConnection
 import pandas as pd
+import pycountry
+
 import dash_mantine_components as dmc
 import plotly.graph_objects as go
 
@@ -25,9 +27,9 @@ from services.logging_utils import log_msg
 dmc.add_figure_templates()
 
 __all__ = [
-    "get_ts_monthly_summary",
-    "get_ts_monthly_summary_cached",
-    "build_ts_plot",
+    "get_geo_metrics",
+    "get_geo_metrics_cached",
+    "build_geo_plot",
 ]
 
 import duckdb
@@ -54,7 +56,7 @@ def get_geo_metrics(conn: duckdb.DuckDBPyConnection,
          'num_purchases', 'tracks_sold', 'revenue',
          'first_time_customers']
     """
-    # 1. Validate inputs
+    # Validate inputs
     if mode not in ("yearly", "aggregate"):
         raise ValueError("mode must be 'yearly' or 'aggregate'")
     assert isinstance(date_range, list) and len(date_range) == 2, \
@@ -193,6 +195,9 @@ def build_geo_plot(
     var, lab = metric["var_name"], metric["label"]
     zmin, zmax = df[var].min(), df[var].max()
 
+    # Build master list of ALL ISO3s via pycountry
+    all_iso = [c.alpha_3 for c in pycountry.countries if hasattr(c, "alpha_3")]
+
     # Generate rich hover text per row
     def mk_hover(r):
         return (
@@ -208,24 +213,45 @@ def build_geo_plot(
 
     df["hover"] = df.apply(mk_hover, axis=1)
 
-    # Build one frame per year
     frames = []
+
+    log_msg(f"[PLOT:geo] Building frames for years: {df['year'].cat.categories}")
+
     for yr in df["year"].cat.categories:
         dff = df[df["year"] == yr]
-        frames.append(go.Frame(
-            name=str(yr),
-            data=[go.Choropleth(
-                locations=dff["iso_alpha"],
-                z=dff[var],
-                text=dff["hover"],
-                hoverinfo="text",
-                colorscale="Viridis_r",
-                zmin=zmin, zmax=zmax,
-                marker_line_color="darkgrey",
-                marker_line_width=0.5,
-                colorbar=dict(title=lab),
-            )]
-        ))
+
+        # Base layer: everyone, dark grey, no colorbar
+        base_trace = go.Choropleth(
+            locations=all_iso,
+            z=[0] * len(all_iso),
+            locationmode="ISO-3",
+            colorscale=[[0, "darkgrey"], [1, "darkgrey"]],
+            showscale=False,
+            marker_line_color="white",
+            marker_line_width=0.5,
+            hoverinfo="skip"
+        )
+
+        # Data layer: your Viridis_r choropleth
+        data_trace = go.Choropleth(
+            locations=dff["iso_alpha"],
+            z=dff[var],
+            text=dff["hover"],
+            hoverinfo="text",
+            colorscale="Viridis_r",
+            zmin=zmin,
+            zmax=zmax,
+            marker_line_color="darkgrey",
+            marker_line_width=0.5,
+            colorbar=dict(title=lab),
+        )
+
+        frames.append(
+            go.Frame(
+                name=str(yr),
+                data=[base_trace, data_trace]
+            )
+        )
 
     # Start the figure on the first frame
     fig = go.Figure(data=frames[0].data, frames=frames)
@@ -280,7 +306,22 @@ def build_geo_plot(
                 }
                 for yr in df["year"].cat.categories
             ]
-        }]
+        }],
+        # Static legend box for "no data"
+        annotations=[
+            dict(
+                text="No data available.",
+                x=0.05, y=0.01,
+                xref="paper", yref="paper",
+                showarrow=False,
+                font=dict(color="white", size=12),
+                align="left",
+                bgcolor="darkgrey",
+                bordercolor="black",
+                borderwidth=1,
+                opacity=0.8
+            )
+        ]
     )
 
     return fig

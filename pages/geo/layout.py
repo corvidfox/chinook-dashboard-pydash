@@ -36,19 +36,7 @@ def layout():
         # Plot
         dmc.Space(h=20),
         dmc.Title("Interactive Plot", order = 4, ta = "center"),
-        dmc.Paper([
-            dcc.Loading(
-                dcc.Graph(
-                    id="geo-metric-plot", 
-                    style={"height": "100%", "width": "100%"}
-                ),
-                delay_hide = 400,
-                custom_spinner = dmc.Skeleton(
-                    height = 200, width = "100%", radius="sm", visible = True
-                )
-            )
-            ], shadow="sm", p="md", radius="md"
-        ),
+        dmc.Title("Plot will go here...", order = 5),
 
         # Scrollable Data Table with Download Button
         dmc.Space(h=20),
@@ -74,3 +62,19 @@ def layout():
             dcc.Download(id="download-geo-csv"),
         ])
     ])
+
+"""
+dmc.Paper([
+            dcc.Loading(
+                dcc.Graph(
+                    id="geo-metric-plot", 
+                    style={"height": "100%", "width": "100%"}
+                ),
+                delay_hide = 400,
+                custom_spinner = dmc.Skeleton(
+                    height = 200, width = "100%", radius="sm", visible = True
+                )
+            )
+            ], shadow="sm", p="md", radius="md"
+        ),
+        """
