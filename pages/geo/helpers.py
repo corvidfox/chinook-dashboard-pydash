@@ -1,0 +1,184 @@
+"""
+helpers.py
+
+Provides utility functions for generating Geographic Distribution panel 
+summaries from DuckDB and building Plotly figures for visualization.
+
+Functions:
+    - get_geo_metrics: raw SQL query for country aggregated metrics.
+    - get_geo_metrics_cached: memoized wrapper around the raw query.
+    - build_geo_plot: constructs a Plotly Figure from KPI DataFrame.
+
+"""
+from typing import Tuple, Dict, List
+from duckdb import DuckDBPyConnection
+import pandas as pd
+import dash_mantine_components as dmc
+from plotly.graph_objects import Figure, Scatter
+
+from services.cache_config import cache
+from services.db import get_connection
+from services.logging_utils import log_msg
+
+# Register Plotly templates at import time.
+dmc.add_figure_templates()
+
+__all__ = [
+    "get_ts_monthly_summary",
+    "get_ts_monthly_summary_cached",
+    "build_ts_plot",
+]
+
+import duckdb
+import pandas as pd
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+def get_geo_metrics(conn: duckdb.DuckDBPyConnection,
+                    date_range: tuple[str, str],
+                    mode: str = "yearly") -> pd.DataFrame:
+    """
+    Queries the filtered_invoices table in DuckDB and returns
+    year-country aggregates for KPIs, including revenue, purchases,
+    tracks sold, customer counts, and first-time customer flag.
+
+    Parameters:
+        con: an active DuckDB connection.
+        date_range: two-element tuple of str dates (YYYY-MM-DD).
+        mode: "yearly" (break out by year) or "aggregate" (one row per country).
+
+    Returns:
+        pd.DataFrame with columns:
+        ['year', 'num_months', 'country', 'num_customers',
+         'num_purchases', 'tracks_sold', 'revenue',
+         'first_time_customers']
+    """
+    # 1. Validate inputs
+    if mode not in ("yearly", "aggregate"):
+        raise ValueError("mode must be 'yearly' or 'aggregate'")
+    assert isinstance(date_range, list) and len(date_range) == 2, \
+        "`date_range` must be a list of two YYYY-MM-DD strings"
+
+    log_msg("[SQL] get_geo_metrics(): querying pre-aggregated KPIs.")
+
+    start_date, end_date = date_range
+    # Catch poorly-formed dates early
+    start_dt = datetime.fromisoformat(start_date)
+    end_dt = datetime.fromisoformat(end_date)
+
+    # Build SQL fragments
+    if mode == "yearly":
+        group_by_year     = "STRFTIME('%Y', fd.dt) AS year,"
+        group_by_fields   = "STRFTIME('%Y', fd.dt), fd.country"
+    else:
+        group_by_year     = "'All' AS year,"
+        group_by_fields   = "fd.country"
+
+    # Compose & run the query
+    sql = f"""
+    WITH filtered_data AS (
+      SELECT
+        fi.CustomerId,
+        fi.dt,
+        i.BillingCountry AS country,
+        fi.InvoiceId
+      FROM filtered_invoices fi
+      JOIN Invoice i ON fi.InvoiceId = i.InvoiceId
+      WHERE fi.dt BETWEEN DATE('{start_date}') AND DATE('{end_date}')
+    ),
+    first_purchases AS (
+      SELECT CustomerId, MIN(dt) AS first_date
+      FROM filtered_data
+      GROUP BY CustomerId
+    )
+    SELECT
+      {group_by_year}
+      fd.country AS country,
+      COUNT(DISTINCT fd.CustomerId) AS num_customers,
+      COUNT(DISTINCT fd.InvoiceId)     AS num_purchases,
+      SUM(il.Quantity)                  AS tracks_sold,
+      SUM(il.UnitPrice * il.Quantity)   AS revenue,
+      COUNT(DISTINCT CASE
+        WHEN fd.dt = fp.first_date THEN fd.CustomerId
+        ELSE NULL
+      END)                               AS first_time_customers
+    FROM filtered_data fd
+    JOIN InvoiceLine il ON fd.InvoiceId = il.InvoiceId
+    JOIN first_purchases fp ON fd.CustomerId = fp.CustomerId
+    GROUP BY {group_by_fields}
+    ORDER BY {group_by_fields}
+    """
+    df = conn.execute(sql).df()
+
+    # Compute `num_months` for each year
+    if mode == "yearly":
+        years = list(range(start_dt.year, end_dt.year + 1))
+    else:
+        years = ["All"]
+
+    months_data = []
+    for y in years:
+        if y == "All":
+            # In aggregate mode, cover the full span
+            delta = relativedelta(end_dt, start_dt)
+            months = delta.years * 12 + delta.months + 1
+            months_data.append({"year": "All", "num_months": months})
+        else:
+            if y == start_dt.year and y == end_dt.year:
+                # same year span
+                months = end_dt.month - start_dt.month + 1
+            elif y == start_dt.year:
+                months = 13 - start_dt.month
+            elif y == end_dt.year:
+                months = end_dt.month
+            else:
+                months = 12
+            months_data.append({"year": str(y), "num_months": months})
+
+    months_df = pd.DataFrame(months_data)
+
+    # Merge & reorder columns
+    out = (
+        df
+        .astype({"year": str})
+        .merge(months_df, on="year", how="left")
+    )
+
+    # Move num_months right after year
+    cols = out.columns.tolist()
+    cols.insert(1, cols.pop(cols.index("num_months")))
+    out = out[cols]
+
+    return out
+
+
+@cache.memoize()
+def get_geo_metrics_cached(
+    events_hash: str,
+    date_range: Tuple[str, ...]
+) -> pd.DataFrame:
+    """
+    Memoized wrapper for `get_geo_metrics`.
+
+    The cache key is derived from `events_hash` plus the `date_range`.
+
+    Parameters:
+        events_hash: A unique hash representing current filter state.
+        date_range:  Tuple of two 'YYYY-MM-DD' date strings.
+
+    Returns:
+        DataFrame: Same structure as `get_ts_monthly_summary`.
+    """
+    conn = get_connection()
+    df_yearly = get_geo_metrics(
+        conn=conn,
+        date_range=list(date_range),
+        mode = "yearly"
+    )
+    df_aggregate = get_geo_metrics(
+        conn=conn,
+        date_range=list(date_range),
+        mode = "aggregate"
+    )
+
+    return df_yearly, df_aggregate
