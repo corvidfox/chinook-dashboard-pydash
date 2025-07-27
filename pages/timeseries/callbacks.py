@@ -194,7 +194,7 @@ def register_callbacks(app: Dash) -> None:
         Input("date-range-store", "data"),
         Input("theme-store", "data"),
     )
-    def render_plot(
+    def render_ts_plot(
         events_hash: str,
         metric_value: str,
         metric_label: str,
