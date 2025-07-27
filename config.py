@@ -82,6 +82,8 @@ def get_mantine_theme(color_scheme: str) -> dict:
     Returns:
         dict: Theme object used by MantineProvider
     """
+    plotly_template = "mantine_dark" if color_scheme == "dark" else "mantine_light"
+
     return {
         "colorScheme": color_scheme,
         "fontFamily": "'Inter', sans-serif",
@@ -93,5 +95,6 @@ def get_mantine_theme(color_scheme: str) -> dict:
         "primaryColor": "indigo",
         "radius": {"sm": 4, "md": 8, "lg": 12},
         "withCssVariables": True,
-        "withGlobalClasses": True
+        "withGlobalClasses": True,
+        "plotlyTemplate": plotly_template
     }
