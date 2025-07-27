@@ -1,5 +1,5 @@
 """
-Time Series Layout
+Time Series Panel Layout
 """
 
 from dash import html, dcc
@@ -31,13 +31,37 @@ def layout(
                         id = "ts-kpi-cards"
                     ),
                     delay_hide = 400,
-                    custom_spinner = [dmc.Skeleton(height = 200, width = "33%", radius="sm", visible = True) for _ in range(3)]
+                    custom_spinner = [
+                        dmc.Skeleton(
+                            height = 200, 
+                            width = "33%", 
+                            radius="sm", 
+                            visible = True
+                        ) for _ in range(3)
+                    ]
                 )
             ],
         style={"padding": "1rem"}
         ),
 
-        dmc.Title("Plot will eventually go here", order = 5),
+        # Plot
+        dmc.Space(h=20),
+        dmc.Title("Interactive Plot", order = 4, ta = "center"),
+        dmc.Paper([
+            dcc.Loading(
+                dcc.Graph(
+                    id="ts-metric-plot", 
+                    style={"height": "100%", "width": "100%"}
+                ),
+                delay_hide = 400,
+                custom_spinner = dmc.Skeleton(
+                    height = 200, width = "100%", radius="sm", visible = True
+                )
+            )
+            ], shadow="sm", p="md", radius="md"
+        ),
+
+        # Scrollable Data Table with Download Button
         dmc.Space(h=20),
         dmc.Title("Scrollable Data Table", order = 4, ta="center"),
         dag.AgGrid(
