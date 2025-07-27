@@ -439,8 +439,8 @@ def make_topn_kpi_card(
             )
             li_children.append(
                 html.Li([
-                html.Strong(f"{label}: "),
-                html.Span(str(val))
+                    html.Strong(f"{label}: "),
+                    html.Span(str(val))
                 ])
             )
 
