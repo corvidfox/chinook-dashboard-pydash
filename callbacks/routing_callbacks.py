@@ -11,13 +11,13 @@ from pages import timeseries, overview, coming_soon
 
 # Page map for routing tabs to layouts
 PAGE_MAP = {
-    "/": overview.layout,
-    "/time-series": timeseries.layout,
+    "/": timeseries.layout,
     "/geo": coming_soon.layout,
-    "/bygenre": coming_soon.layout,
-    "/byartist": coming_soon.layout,
+    "/by-genre": coming_soon.layout,
+    "/by-artist": coming_soon.layout,
     "/retention": coming_soon.layout,
     "/insights": coming_soon.layout,
+    "/debug": overview.layout,
 }
 
 def register_callbacks(app):
@@ -26,35 +26,18 @@ def register_callbacks(app):
         Output("current-page", "data"),
         Output("page-content-loading", "data"),
         Input("main-tabs", "value"),
-        State("events-shared-fingerprint", "data"),
-        State("date-range-store",          "data"),
-        State("max-offset-store",          "data"),
-        State("metric-store",              "data"),
-        State("metric-label-store",        "data"),
-        State("offsets-store",             "data"),
-        State("cohort-fingerprint",        "data"),
-        State("retention-cohort-data",     "data"),
-        State("kpis-fingerprint",          "data"),
-        State("static-kpis",               "data"),
     )
     def render_page(
-        tab_value,
-        events_hash,
-        date_range,
-        max_offset,
-        metric_val,
-        metric_label,
-        offsets,
-        cohort_hash,
-        cohort_data,
-        kpis_hash,
-        kpis_store
+        tab_value
         ):
         if not tab_value:
             raise PreventUpdate
 
         if tab_value not in PAGE_MAP:
-            log_msg(f"     [CALLBACK:routing] Invalid tab route: {tab_value}", level="warning")
+            log_msg(
+                f"     [CALLBACK:routing] Invalid tab route: {tab_value}", 
+                level="warning"
+                )
 
         log_msg(f"[CALLBACK:routing] Rendering page → {tab_value}")
 
@@ -63,18 +46,7 @@ def register_callbacks(app):
             lambda **kwargs: html.Div("404")
             )
         
-        content = layout_func(
-            events_hash=events_hash,
-            date_range=date_range,
-            max_offset=max_offset,
-            metric_val=metric_val,
-            metric_label=metric_label,
-            offsets=offsets,
-            cohort_hash=cohort_hash,
-            cohort_data=cohort_data,
-            kpis_hash=kpis_hash,
-            kpis_store=kpis_store
-        )
+        content = layout_func()
         return content, tab_value, False
 
     @app.callback(
@@ -86,5 +58,7 @@ def register_callbacks(app):
         """
         Syncs tab selection with browser URL.
         """
-        log_msg(f"[CALLBACK:routing] URL updated from tab selection → {tab_value}")
+        log_msg(
+            f"[CALLBACK:routing] URL updated from tab selection → {tab_value}"
+            )
         return tab_value

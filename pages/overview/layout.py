@@ -7,18 +7,7 @@ from dash import html
 import dash_ag_grid as dag
 import dash_mantine_components as dmc
 
-def layout(
-    events_hash=None,
-    date_range=None,
-    max_offset=None,
-    metric_val=None,
-    metric_label=None,
-    offsets=None,
-    cohort_hash=None,
-    cohort_data=None,
-    kpis_hash=None,
-    kpis_store=None
-    ):
+def layout():
     return html.Div([
 
         html.H4("Date Range"),
