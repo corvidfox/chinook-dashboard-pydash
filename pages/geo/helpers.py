@@ -14,10 +14,11 @@ from typing import Tuple, Dict, List
 from duckdb import DuckDBPyConnection
 import pandas as pd
 import dash_mantine_components as dmc
-from plotly.graph_objects import Figure, Scatter
+import plotly.graph_objects as go
 
 from services.cache_config import cache
 from services.db import get_connection
+from services.display_utils import format_kpi_value
 from services.logging_utils import log_msg
 
 # Register Plotly templates at import time.
@@ -182,3 +183,104 @@ def get_geo_metrics_cached(
     )
 
     return df_yearly, df_aggregate
+
+
+def build_geo_plot(
+    df: pd.DataFrame,
+    metric: Dict[str, str],
+    theme_info: Dict[str, str],
+) -> go.Figure:
+    var, lab = metric["var_name"], metric["label"]
+    zmin, zmax = df[var].min(), df[var].max()
+
+    # Generate rich hover text per row
+    def mk_hover(r):
+        return (
+            f"Country: {r.country}<br>"
+            f"Year: {r.year}<br>"
+            f"{lab}: {format_kpi_value(r[var], 'dollar') if var == 'revenue' else format_kpi_value(r[var], 'number')}<br>"
+            f"Purchases: {format_kpi_value(r.num_purchases, 'number')}<br>"
+            f"Tracks Sold: {format_kpi_value(r.tracks_sold, 'number')}<br>"
+            f"Customers: {format_kpi_value(r.num_customers, 'number')}<br>"
+            f"First-Time Cust: {format_kpi_value(r.first_time_customers, 'number')}<br>"
+            f"Rev/Cust: {format_kpi_value(r.revenue / r.num_customers, 'dollar')}"
+        )
+
+    df["hover"] = df.apply(mk_hover, axis=1)
+
+    # Build one frame per year
+    frames = []
+    for yr in df["year"].cat.categories:
+        dff = df[df["year"] == yr]
+        frames.append(go.Frame(
+            name=str(yr),
+            data=[go.Choropleth(
+                locations=dff["iso_alpha"],
+                z=dff[var],
+                text=dff["hover"],
+                hoverinfo="text",
+                colorscale="Viridis_r",
+                zmin=zmin, zmax=zmax,
+                marker_line_color="darkgrey",
+                marker_line_width=0.5,
+                colorbar=dict(title=lab),
+            )]
+        ))
+
+    # Start the figure on the first frame
+    fig = go.Figure(data=frames[0].data, frames=frames)
+
+    # Layout + play/pause + slider
+    fig.update_layout(
+        template=theme_info["template"],
+        font_family=theme_info["fontFamily"],
+        title=dict(text=f"{lab} by Country (Animated by Year)", x=0.5),
+        geo=dict(
+            showframe=True,
+            showcoastlines=True,
+            projection_type="natural earth"
+        ),
+        updatemenus=[{
+            "type": "buttons",
+            "direction": "left",
+            "buttons": [
+                {
+                    "label": "Play",
+                    "method": "animate",
+                    "args": [None, {
+                        "frame": {"duration": 1000, "redraw": True},
+                        "fromcurrent": True,
+                        "transition": {"duration": 300, "easing": "quadratic-in-out"}
+                    }]
+                },
+                {
+                    "label": "Pause",
+                    "method": "animate",
+                    "args": [[None], {
+                        "frame": {"duration": 0},
+                        "mode": "immediate"
+                    }]
+                }
+            ],
+            "showactive": False,
+            "x": 0.1, "y": 0.05,
+            "pad": {"r": 10, "t": 10}
+        }],
+        sliders=[{
+            "active": 0,
+            "pad": {"t": 50},
+            "steps": [
+                {
+                    "method": "animate",
+                    "label": yr,
+                    "args": [[yr], {
+                        "frame": {"duration": 500, "redraw": True},
+                        "mode": "immediate"
+                    }]
+                }
+                for yr in df["year"].cat.categories
+            ]
+        }]
+    )
+
+    return fig
