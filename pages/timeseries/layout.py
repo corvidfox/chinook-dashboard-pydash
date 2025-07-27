@@ -22,12 +22,18 @@ def layout(
     return html.Div([
         # KPI Cards
         html.Div(
-            dmc.SimpleGrid(
-                cols={"base": 1, "sm": 3, "lg": 3},
-                spacing="lg",
-                children=[],
-                id = "ts-kpi-cards"
-            ),
+            [
+                dcc.Loading(
+                    children = dmc.SimpleGrid(
+                        cols={"base": 1, "sm": 3, "lg": 3},
+                        spacing="lg",
+                        children = [],
+                        id = "ts-kpi-cards"
+                    ),
+                    delay_hide = 400,
+                    custom_spinner = [dmc.Skeleton(height = 200, width = "33%", radius="sm", visible = True) for _ in range(3)]
+                )
+            ],
         style={"padding": "1rem"}
         ),
 
@@ -55,19 +61,3 @@ def layout(
             dcc.Download(id="download-ts-csv"),
         ])
     ])
-
-
-"""        
-        dmc.Card(
-        children=[
-            dmc.CardSection(
-                dmc.Group([DashIconify(icon="mdi:chart-line"), dmc.Text("words")], gap="xs", align="center"),
-                className="kpi-card-header"),
-            dmc.CardSection(dmc.Text("No data available.", ta="center"), className="kpi-card-body")
-            ],
-        className="kpi-card",
-        shadow="sm",
-        radius="md",
-        withBorder=True
-    ),
-"""

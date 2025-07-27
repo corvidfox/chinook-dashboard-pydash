@@ -1,6 +1,7 @@
 import json
 from datetime import date
-from dash import Input, Output, State, callback, html, dcc
+from dash import dash, Input, Output, State, callback, html, dcc, ctx
+import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 from dash.exceptions import PreventUpdate
 import pandas as pd
@@ -69,12 +70,13 @@ def register_callbacks(app):
         Input("kpis-fingerprint", "data")
     )
     def update_ts_kpis(dynamic_kpis, dynamic_kpis_hash):
+        
         ts_kpis = dynamic_kpis
-
+        
         def revenue_kpis():
             return [
                 safe_kpi_entry("Total", ts_kpis["metadata_kpis"].get("revenue_total_fmt"), "Total revenue."),
-                safe_kpi_entry("Avg / Month", ts_kpis["metadata_kpis"].get("revenue_per_month", "Average revenue per month."))
+                safe_kpi_entry("Avg / Month", ts_kpis["metadata_kpis"].get("revenue_per_month"), "Average revenue per month.")
             ]
 
         def purchase_kpis():
@@ -87,17 +89,35 @@ def register_callbacks(app):
         def customer_kpis():
             return [
             safe_kpi_entry("Total", ts_kpis["metadata_kpis"].get("cust_num"), "Total unique customers."),
-            safe_kpi_entry("First-Time", ts_kpis["metadata_kpis"].get("cust_per_new", "(%) first-time customers."))
+            safe_kpi_entry("First-Time", ts_kpis["metadata_kpis"].get("cust_per_new"), "(%) first-time customers.")
         ]
 
-        return [
+        cards = [
             safe_kpi_card(
-                ts_kpis, revenue_kpis,  
-                title="Revenue",  icon = "mdi:chart-line", #icon="tdesign:money", 
-                tooltip="Gross revenue"),
-            safe_kpi_card(ts_kpis, purchase_kpis, title="Purchases", icon="carbon:receipt", tooltip="Purchase patterns"),
-            safe_kpi_card(ts_kpis, customer_kpis,   title="Customers", icon="mdi:people-outline", tooltip="Customer stats"),
+                ts_kpis, 
+                revenue_kpis,  
+                title="Revenue",  
+                icon="tdesign:money", 
+                tooltip = "Revenue Statistics"
+            ),
+            safe_kpi_card(
+                ts_kpis, 
+                purchase_kpis, 
+                title="Purchases", 
+                icon="carbon:receipt", 
+                tooltip = "Purchase statistics"
+                ),
+            safe_kpi_card(
+                ts_kpis, 
+                customer_kpis, 
+                title="Customers", 
+                icon="mdi:people-outline", 
+                tooltip = "Customer statistics"
+                )
         ]
+
+        return cards
+
     
     @app.callback(
         Output("download-ts-csv", "data"),
