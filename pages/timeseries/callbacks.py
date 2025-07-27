@@ -28,7 +28,7 @@ from pages.timeseries.helpers import (
     get_ts_monthly_summary_cached,
     build_ts_plot,
 )
-from services.display_utils import safe_kpi_card, safe_kpi_entry
+from services.display_utils import make_static_kpi_card
 from services.logging_utils import log_msg
 
 
@@ -120,49 +120,68 @@ def register_callbacks(app: Dash) -> None:
             A list of Dash components representing KPI cards.
         """
         log_msg("[CALLBACK:timeseries] Updating KPI cards.")
-        ts_kpis = dynamic_kpis
-        
-        def revenue_kpis():
-            return [
-                safe_kpi_entry("Total", ts_kpis["metadata_kpis"].get("revenue_total_fmt"), "Total revenue."),
-                safe_kpi_entry("Avg / Month", ts_kpis["metadata_kpis"].get("revenue_per_month"), "Average revenue per month.")
-            ]
-
-        def purchase_kpis():
-            return [
-            safe_kpi_entry("Purchases", ts_kpis["metadata_kpis"].get("purchases_num"), "Total number of unique purchase events."),
-            safe_kpi_entry("Tracks Sold", ts_kpis["metadata_kpis"].get("tracks_sold_num"), "Total unit sales."),
-            safe_kpi_entry("Avg $ / Purchase", ts_kpis["metadata_kpis"].get("revenue_per_purchase"), "Average revenue per purchase.")
+        revenue_specs = [
+        { "label": "Total",
+            "key_path": ["metadata_kpis", "revenue_total_fmt"],
+            "fmt": True,
+            "tooltip": "Total revenue." },
+        { "label": "Avg / Month",
+            "key_path": ["metadata_kpis", "revenue_per_month"],
+            "fmt": True,
+            "tooltip": "Average revenue per month." }
         ]
 
-        def customer_kpis():
-            return [
-            safe_kpi_entry("Total", ts_kpis["metadata_kpis"].get("cust_num"), "Total unique customers."),
-            safe_kpi_entry("First-Time", ts_kpis["metadata_kpis"].get("cust_per_new"), "(%) first-time customers.")
+        purchase_specs = [
+        { "label": "Purchases",
+            "key_path": ["metadata_kpis", "purchases_num"],
+            "fmt": True,
+            "tooltip": "Total number of unique purchase events." },
+        { "label": "Tracks Sold",
+            "key_path": ["metadata_kpis", "tracks_sold_num"],
+            "fmt": True,
+            "tooltip": "Total unit sales." },
+        { "label": "Avg $ / Purchase",
+            "key_path": ["metadata_kpis", "revenue_per_purchase"],
+            "fmt": True,
+            "tooltip": "Average revenue per purchase." }
         ]
 
+        customer_specs = [
+        { "label": "Total",
+            "key_path": ["metadata_kpis", "cust_num"],
+            "fmt": True,
+            "tooltip": "Total unique customers." },
+        { "label": "First-Time",
+            "key_path": ["metadata_kpis", "cust_per_new"],
+            "fmt": True,
+            "tooltip": "(%) First-time customers." }
+        ]
+
+        # 2) Build cards with a single call each
         cards = [
-            safe_kpi_card(
-                ts_kpis, 
-                revenue_kpis,  
-                title="Revenue",  
-                icon="tdesign:money", 
-                tooltip = "Revenue Statistics"
-            ),
-            safe_kpi_card(
-                ts_kpis, 
-                purchase_kpis, 
-                title="Purchases", 
-                icon="carbon:receipt", 
-                tooltip = "Purchase statistics"
-                ),
-            safe_kpi_card(
-                ts_kpis, 
-                customer_kpis, 
-                title="Customers", 
-                icon="mdi:people-outline", 
-                tooltip = "Customer statistics"
-                )
+        make_static_kpi_card(
+            kpi_bundle=dynamic_kpis,
+            specs=revenue_specs,
+            title="Revenue",
+            icon="tdesign:money",
+            tooltip="Gross revenue, US Dollars."
+        ),
+
+        make_static_kpi_card(
+            kpi_bundle=dynamic_kpis,
+            specs=purchase_specs,
+            title="Purchases",
+            icon="carbon:receipt",
+            tooltip="Purchase patterns."
+        ),
+
+        make_static_kpi_card(
+            kpi_bundle=dynamic_kpis,
+            specs=customer_specs,
+            title="Customers",
+            icon="mdi:people-outline",
+            tooltip="Customer overview."
+        ),
         ]
 
         return cards

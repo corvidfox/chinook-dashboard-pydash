@@ -102,3 +102,8 @@ html, body, #mantine-provider {
 .kpi-list-item {
   margin-bottom: 0.5rem;
 }
+
+/* Footer */
+.kpi-card-footer {
+  padding: var(--mantine-spacing-sm) var(--mantine-spacing-md);
+}

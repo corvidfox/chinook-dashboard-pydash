@@ -1,5 +1,5 @@
 """
-helper.py
+helpers.py
 
 Provides utility functions for generating Time Series panel summaries
 from DuckDB and building Plotly figures for visualization.

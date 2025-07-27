@@ -10,6 +10,8 @@ Includes:
 - _build_kpi_list(): Internal helper. Converts a list of KPI dicts into an HTML 
     <ul> with styled <li> items.
 - safe_kpi_card(): Renders a KPI card with a header and body.
+- make_topn_kpi_card(): Makes a "Top N" ranking KPI card.
+- make_static_kpi_card(): Makes a static "set list of values" KPI card.
 """
 
 import locale
@@ -17,9 +19,10 @@ import numbers
 import math
 import country_converter as coco
 import pandas as pd
-from typing import Union, List, Dict, Any, Callable, Optional
+from typing import Tuple, Union, List, Dict, Any, Callable, Optional
 
 from dash import html
+from dash.development.base_component import Component
 from dash_iconify import DashIconify
 import dash_mantine_components as dmc
 
@@ -162,23 +165,25 @@ def flagify_country(
         label_text and label_text != "not found"
         ) else flag
 
+
 def safe_kpi_entry(
     label: str,
     value: Any,
     tooltip: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Return a KPI entry dict.  
+    Return a KPI entry dict.
     Falls back to "No data available" for None, empty string, or NaN.
     """
     if value is None or value == "" or (
-        isinstance(value, float) and pd.isna(value)
-        ):
+       isinstance(value, float) and pd.isna(value)
+    ):
         display = "No data available"
     else:
         display = value
 
     return {"label": label, "value": display, "tooltip": tooltip}
+
 
 def _build_kpi_list(kpis: List[Dict[str, Any]]) -> html.Ul:
     """
@@ -193,10 +198,10 @@ def _build_kpi_list(kpis: List[Dict[str, Any]]) -> html.Ul:
         if k.get("tooltip"):
             line = dmc.Tooltip(
                 line,
-                label=k["tooltip"], 
-                withArrow=True, 
+                label=k["tooltip"],
+                withArrow=True,
                 position="top"
-                )
+            )
         items.append(html.Li(line, className="kpi-list-item"))
 
     return html.Ul(items, className="kpi-list")
@@ -204,86 +209,259 @@ def _build_kpi_list(kpis: List[Dict[str, Any]]) -> html.Ul:
 
 def safe_kpi_card(
     kpi_bundle: Dict[str, Any],
-    body_fn: Callable[[], List[Dict[str, Any]]],
+    body_fn: Callable[
+        [], 
+        Union[List[Dict[str, Any]], Component, Dict[str, Any]]
+    ],
+    title: str,
+    icon: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    list_style: Optional[Dict[str, Any]] = None
+) -> dmc.Card:
+    """
+    Render a KPI card with:
+      • Header (icon + title + optional tooltip) — always shown
+      • Body
+        - If kpi_bundle is empty → one line “No data available.”
+        - Else if body_fn() yields no items → same one-line fallback
+        - Else show your UL/OL/custom component + optional footer
+    """
+    # Build the header
+    header_elems: List[Any] = []
+    if icon:
+        try:
+            header_elems = [
+                DashIconify(icon=icon, inline=True, width=20, height=20),
+                dmc.Text(title, fw=700, size="md", span=True),
+            ]
+        except Exception:
+            header_elems = [dmc.Text(title, fw=700, size="md")]
+    else:
+        header_elems = [dmc.Text(title, fw=700, size="md")]
+
+    header_group = dmc.Group(header_elems, gap="xs", ta="center", wrap=True)
+    if tooltip:
+        header_group = dmc.Tooltip(
+            header_group, label=tooltip, withArrow=True, position="top"
+        )
+
+    header = dmc.CardSection(
+        html.Div(header_group, className="kpi-card-header"),
+        style={"padding": 0},
+        className="kpi-card-header-wrapper"
+    )
+
+    # If there's no bundle at all, skip to single-line body
+    if not kpi_bundle:
+        body_only = dmc.CardSection(
+            dmc.Text("No data available.", ta="center"),
+            className="kpi-card-body"
+        )
+        return dmc.Card(
+            children=[header, body_only],
+            className="kpi-card",
+            shadow="sm", radius="md", withBorder=True,
+            style={"width": "100%"}
+        )
+
+    # Otherwise invoke body_fn() once
+    try:
+        result = body_fn() if callable(body_fn) else []
+    except Exception:
+        result = []
+
+    # Detect an “empty” result
+    def _empty(res) -> bool:
+        # Nothing at all
+        if res is None:
+            return True
+
+        # A plain list with zero length
+        if isinstance(res, list):
+            return len(res) == 0
+
+        # Any Dash component or HTML element:
+        #     check its .children property instead of .props
+        if hasattr(res, "children"):
+            kids = res.children
+            # None, empty list/tuple -> truly empty
+            if kids is None:
+                return True
+            if isinstance(kids, (list, tuple)) and len(kids) == 0:
+                return True
+            # anything else (string, single child, non-empty list) -> non-empty
+            return False
+
+        # “dict with body/footer” convention
+        if isinstance(res, dict) and "body" in res:
+            return _empty(res["body"]) and not bool(res.get("footer"))
+
+        # By default assume it isn’t empty
+        return False
+
+    # If body_fn gave nothing, again fall back to single-line body
+    if _empty(result):
+        body_comp = dmc.Text("No data available.", ta="center")
+        footer_txt = None
+
+    else:
+        # Non-empty: normalize into a component + optional footer
+        # dict-with-body/footer protocol
+        if isinstance(result, dict) and "body" in result:
+            body_comp = result["body"]
+            footer_txt = result.get("footer")
+
+        #any Dash/HTML component -> render it directly
+        elif hasattr(result, "children"):
+            body_comp = result
+            footer_txt = None
+
+        # a plain Python list of KPI-dicts -> build a <ul> via helper
+        elif isinstance(result, list):
+            from services.display_utils import _build_kpi_list
+            body_comp = _build_kpi_list(result)
+            footer_txt = None
+            if list_style:
+                # optional inline override
+                body_comp = html.Ul(
+                    children=body_comp.children,
+                    className=body_comp.className,
+                    style=list_style
+                )
+
+        # (shouldn’t happen) fallback
+        else:
+            body_comp = dmc.Text("No data available.", ta="center")
+            footer_txt = None
+
+
+    # Wrap the body component in its section
+    body_section = dmc.CardSection(body_comp, className="kpi-card-body")
+
+    # Assemble the final card
+    children = [header, body_section]
+    if not _empty(result) and isinstance(result, dict) and result.get("footer"):
+        children.append(
+            dmc.CardSection(
+                dmc.Text(result["footer"], size="md", ta="left"),
+                className="kpi-card-footer"
+            )
+        )
+
+    return dmc.Card(
+        children=children,
+        className="kpi-card",
+        shadow="sm", radius="md", withBorder=True,
+        style={"width": "100%"}
+    )
+
+
+def make_static_kpi_card(
+    kpi_bundle: Dict[str, Any],
+    specs: List[Dict[str, Any]],
     title: str,
     icon: Optional[str] = None,
     tooltip: Optional[str] = None
 ) -> dmc.Card:
     """
-    Render a KPI card with a header and body.
+    Build a KPI card with a fixed list of metrics.
 
-    Args:
-        kpi_bundle: Used only to detect "no data" when empty.
-        body_fn:   Returns a list of KPI dicts (label/value/tooltip).
-        title:     Header text.
-        icon:      String name for DashIconify (e.g. "mdi:chart-line").
-        tooltip:   Optional hover tooltip for the header.
-
-    Returns:
-        A styled dmc.Card that obeys light/dark theming.
+    specs: list of {
+        "label":    str,
+        "key_path": List[str],
+        "fmt":      bool,
+        "tooltip":  Optional[str]
+    }
     """
-    # Check if data is present
-    has_data = bool(kpi_bundle and callable(body_fn) and body_fn())
-    entries = body_fn() if has_data else []
-
-    # Header section
-    header_children: List[Any] = []
-    if icon:
-        try:
-            log_msg(f"[DISPLAY UTILS] - attempting to pull icon: {icon}")
-            header_children = [
-                DashIconify(icon = icon, inline=True, width = 20, height = 20),
-                dmc.Text(title, fw=700, size="md", span=True)
-            ]
-        except Exception:
-            log_msg(f"  [DISPLAY UTILS] - Invalid icon: {icon}")
-            header_children = [
-                dmc.Text(title, fw=700, size="md")
-            ]
-    else:
-        header_children = [
-                dmc.Text(title, fw=700, size="md")
-            ]
-
-    header_children = dmc.Group(
-                header_children, 
-                gap="xs", 
-                align="center", 
-                wrap = True
+    def body_fn() -> List[Dict[str, Any]]:
+        entries = []
+        for s in specs:
+            val = kpi_bundle
+            for k in s["key_path"]:
+                val = (val or {}).get(k)
+            display = val if s.get("fmt", False) else format_kpi_value(val)
+            entries.append(
+                safe_kpi_entry(
+                    label=s["label"], 
+                    value=display, 
+                    tooltip=s.get("tooltip")
+                    )
             )
+        return entries
 
-    if tooltip:
-        header_children = dmc.Tooltip(
-            header_children, 
-            label=tooltip, 
-            withArrow=True, 
-            position="top"
-            )
-
-    header = dmc.CardSection(
-        html.Div(
-            header_children,
-        className="kpi-card-header"
-        ),
-        style={"padding": 0},
-        className="kpi-card-header-wrapper"
+    return safe_kpi_card(
+        kpi_bundle=kpi_bundle,
+        body_fn=body_fn,
+        title=title,
+        icon=icon,
+        tooltip=tooltip,
+        list_style={"listStyleType": "none", "paddingLeft": 0}
     )
 
-    # Body section
-    if not entries:
-        # single centered line when no KPIs
-        body_content = dmc.Text("No data available.", ta="center")
-    else:
-        body_content = _build_kpi_list(entries)
 
-    body = dmc.CardSection(body_content, className="kpi-card-body")
+def make_topn_kpi_card(
+    kpis: Dict[str, Any],
+    metric_key: str,
+    fmt_key: str,
+    title: str,
+    top_n: int = 5,
+    icon: str = None,
+    tooltip: str = None,
+    total_label: str = "Total Countries",
+    custom_label_fn: Optional[Callable[[int, Dict[str, Any]], str]] = None,
+    custom_value_fn: Optional[Callable[[Dict[str, Any]], str]] = None,
+    list_path: Tuple[str, ...] = ("topn", "topn_country"),
+    include_footer: bool = True
+) -> dmc.Card:
+    """
+    A Top N “ol” card. We pass only the nested slice as bundle,
+    so safe_kpi_card sees that slice’s num_vals and won’t fallback.
+    """
+    # Pre‐drill the slice for safe_kpi_card’s bundle check
+    src = kpis
+    for p in list_path:
+        src = src.get(p, {})
 
-    # Full card
-    return dmc.Card(
-        children=[header, body],
-        className="kpi-card",
-        shadow="sm",
-        radius="md",
-        withBorder=True,
-        style = {"width": "100%"}
+    def body_fn():
+        # only build the top-N list items
+        items = src.get(metric_key, [])[:top_n]
+        li_children = []
+        for idx, itm in enumerate(items, start=1):
+            label = (
+                custom_label_fn(idx, itm)
+                if custom_label_fn
+                else itm.get("group_val_fmt", itm.get("group_val", "--"))
+            )
+            val = (
+                custom_value_fn(itm)
+                if custom_value_fn
+                else itm.get(fmt_key, "--")
+            )
+            li_children.append(
+                html.Li([
+                html.Strong(f"{label}: "),
+                html.Span(str(val))
+                ])
+            )
+
+        ol = html.Ol(
+            children=li_children,
+            style={"paddingLeft": "1.2em", "margin": 0}
+        )
+
+        # return a dict so safe_kpi_card will render
+        # ol in the body section and footer separately
+        if include_footer:
+            total = src.get("num_vals", "--")
+            footer = f"{total_label}: {total}"
+            return {"body": ol, "footer": footer}
+        else:
+            return ol
+
+    return safe_kpi_card(
+        kpi_bundle=src,
+        body_fn=body_fn,
+        title=title,
+        icon=icon,
+        tooltip=tooltip
     )
