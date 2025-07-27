@@ -1,10 +1,15 @@
 """
-Display utilities for formatting values in the Chinook dashboard.
+Display utilities for formatting values and rendering KPI card displays.
 
 Includes:
-- format_kpi_value(): Converts numbers, currencies, percentages, and country codes to human-readable strings
+- format_kpi_value(): Converts numbers, currencies, percentages, and country 
+    codes to human-readable strings
 - flagify_country(): Translates ISO country codes into emoji flags + labels
 - standardize_country_to_iso3(): Cleans arbitrary country names to ISO-3 format
+- safe_kpi_entry(): Returns a kpi entry dict, with a fallback for empty values.
+- _build_kpi_list(): Internal helper. Converts a list of KPI dicts into an HTML 
+    <ul> with styled <li> items.
+- safe_kpi_card(): Renders a KPI card with a header and body.
 """
 
 import locale
@@ -13,6 +18,7 @@ import math
 import country_converter as coco
 import pandas as pd
 from typing import Union, List, Dict, Any, Callable, Optional
+
 from dash import html
 from dash_iconify import DashIconify
 import dash_mantine_components as dmc
@@ -155,15 +161,6 @@ def flagify_country(
     return f"{flag} {label_text}" if (
         label_text and label_text != "not found"
         ) else flag
-
-# services/kpi_utils.py %%%
-
-from typing import Any, Callable, Dict, List, Optional
-from dash import html
-import dash_mantine_components as dmc
-from dash_iconify import DashIconify
-import pandas as pd
-
 
 def safe_kpi_entry(
     label: str,
