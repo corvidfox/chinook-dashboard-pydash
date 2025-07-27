@@ -40,13 +40,31 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, fil
                     value=active_tab,
                     children=[
                         dmc.TabsList([
-                            dmc.TabsTab("Overview (Debug)", value="/"),
-                            dmc.TabsTab("Trends Over Time", value="/time-series"),
-                            dmc.TabsTab("Geographic Distribution", value = "/geo"),
-                            dmc.TabsTab("Performance by Genre", value = "/by-genre"),
-                            dmc.TabsTab("Performance by Artist", value = "/by-artist"),
-                            dmc.TabsTab("Customer Retention", value = "/retention"),
-                            dmc.TabsTab("Key Insights", value="/insights")
+                            dmc.TabsTab("Trends Over Time", value="/"),
+                            dmc.TabsTab(
+                                "Geographic Distribution", 
+                                value = "/geo"
+                            ),
+                            dmc.TabsTab(
+                                "Performance by Genre", 
+                                value = "/by-genre"
+                                ),
+                            dmc.TabsTab(
+                                "Performance by Artist", 
+                                value = "/by-artist"
+                                ),
+                            dmc.TabsTab(
+                                "Customer Retention", 
+                                value = "/retention"
+                                ),
+                            dmc.TabsTab(
+                                "Key Insights", 
+                                value="/insights"
+                                ),
+                            dmc.TabsTab(
+                                "Overview (Debug)", 
+                                value="/debug"
+                                )
                         ])
                     ],
                     mb="lg"

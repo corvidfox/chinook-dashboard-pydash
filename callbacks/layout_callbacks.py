@@ -10,7 +10,11 @@ import dash_mantine_components as dmc
 
 from services.logging_utils import log_msg
 from components.layout import make_layout
-from services.metadata import get_filter_metadata, get_static_summary, get_last_commit_date
+from services.metadata import (
+    get_filter_metadata, 
+    get_static_summary, 
+    get_last_commit_date
+)
 from components import filters
 from config import get_mantine_theme
 
@@ -30,12 +34,12 @@ def register_callbacks(app):
 
     @app.callback(
         Output("main-layout", "children"),
-        Input("navbar-state", "data"),
-        Input("theme-store", "data"),
         Input("theme-init-trigger", "n_intervals"),
-        State("current-page", "data")
+        State("navbar-state", "data"),
+        State("theme-store", "data"),
+        State("current-page", "data"),
     )
-    def update_layout(navbar_state, theme_data, n_intervals, current_page):
+    def update_layout(n_intervals, navbar_state, theme_data, current_page):
         if not theme_data or "color_scheme" not in theme_data:
             raise PreventUpdate
 
