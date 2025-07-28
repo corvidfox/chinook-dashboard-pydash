@@ -99,7 +99,7 @@ def get_filter_metadata() -> Dict[str, Any]:
     def to_iso(val):
         return val.date().isoformat() if hasattr(val, "date") else str(val)[:10]
 
-    log_msg(f"     [META] Date range: {to_iso(date_min)} – {to_iso(date_max)}")
+    log_msg(f"     [META] Date range: {to_iso(date_min)} to {to_iso(date_max)}")
 
     return {
         "genres": genres,
@@ -108,8 +108,11 @@ def get_filter_metadata() -> Dict[str, Any]:
         "date_range": (to_iso(date_min), to_iso(date_max)),
         "metrics": [
             {"label": "Revenue (USD$)", "var_name": "revenue"},
-            {"label": "Number of Customers", "var_name": "num_customers"}
-            ]
+            {"label": "Number of Customers", "var_name": "num_customers"},
+            {"label": "First-Time Customers", "var_name": "first_time_customers"},
+            {"label": "Number of Purchases", "var_name": "num_purchases"},
+            {"label": "Tracks Sold", "var_name": "tracks_sold"}
+        ]
     }
 
 
