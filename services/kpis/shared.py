@@ -22,7 +22,6 @@ import pandas as pd
 from duckdb import DuckDBPyConnection
 
 from services.logging_utils import log_msg
-from services.display_utils import format_kpi_value
 from services.kpis.core import get_subset_core_kpis
 from services.kpis.group import get_group_kpis_full, topn_kpis_slice_topn, topn_kpis_format_display
 from services.kpis.retention import get_retention_kpis
@@ -64,7 +63,7 @@ def get_shared_kpis(
     """
     log_msg("[SQL - KPI PIPELINE] Starting shared KPI aggregation")
 
-    # 1) Core subset‐level KPIs
+    # Core subset‐level KPIs
     metadata_kpis = get_subset_core_kpis(conn, date_range)
     log_msg("   [SQL - KPI PIPELINE] Retrieved subset metadata KPIs")
 
@@ -72,7 +71,7 @@ def get_shared_kpis(
         log_msg("   [SQL - KPI PIPELINE] 0 Invoices, returning empty.")
         return {}
     
-    # 2) Top-N group slices
+    # Top-N group slices
     topn_by_group: Dict[str, Dict[str, Any]] = {}
     for group in ["Genre", "Artist", "BillingCountry"]:
         log_msg(f"   [SQL - KPI PIPELINE] Generating top-{top_n} tables for {group}")
@@ -84,6 +83,7 @@ def get_shared_kpis(
             var = metric_def["var_name"]
             topn_df = topn_kpis_slice_topn(full_df, var, top_n)
             formatted = topn_kpis_format_display(
+                conn,
                 topn_df,
                 group_var=group,
                 total_revenue=float(metadata_kpis["revenue_total"])
@@ -99,7 +99,7 @@ def get_shared_kpis(
 
     log_msg("   [SQL - KPI PIPELINE] Retrieved Top-N KPI blocks")
 
-    # 3) Cohort retention KPIs (use passed-in cohort_df)
+    # Cohort retention KPIs (use passed-in cohort_df)
     retention_kpis = get_retention_kpis(
         conn=conn,
         date_range=date_range,

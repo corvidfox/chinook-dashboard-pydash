@@ -185,23 +185,33 @@ def safe_kpi_entry(
     return {"label": label, "value": display, "tooltip": tooltip}
 
 
-def _build_kpi_list(kpis: List[Dict[str, Any]]) -> html.Ul:
+def _build_kpi_list(kpis: List[Union[Dict[str, Any], Any]]) -> html.Ul:
     """
-    Convert a list of KPI dicts into an HTML <ul> with styled <li> items.
+    Convert a mixed list of KPI entries into a styled <ul>.
+
+    Accepts either:
+    - Dicts with 'label' and 'value' keys (standard KPI entries)
+    - Raw Dash components (e.g. html.Label, html.Ol), which are rendered directly
     """
     items = []
-    for k in kpis:
-        line = html.Span([
-            html.Strong(f"{k['label']}: "),
-            html.Span(str(k["value"]))
-        ])
-        if k.get("tooltip"):
-            line = dmc.Tooltip(
-                line,
-                label=k["tooltip"],
-                withArrow=True,
-                position="top"
-            )
+
+    for entry in kpis:
+        if isinstance(entry, dict) and "label" in entry and "value" in entry:
+            line = html.Span([
+                html.Strong(f"{entry['label']}: "),
+                entry["value"]  # preserve component structure
+            ])
+            if entry.get("tooltip"):
+                line = dmc.Tooltip(
+                    line,
+                    label=entry["tooltip"],
+                    withArrow=True,
+                    position="top"
+                )
+        else:
+            # Treat as a pre-rendered component
+            line = entry
+
         items.append(html.Li(line, className="kpi-list-item"))
 
     return html.Ul(items, className="kpi-list")
@@ -415,7 +425,7 @@ def make_topn_kpi_card(
 ) -> dmc.Card:
     """
     A Top N “ol” card. We pass only the nested slice as bundle,
-    so safe_kpi_card sees that slice’s num_vals and won’t fallback.
+    so safe_kpi_card sees that slice's num_vals and won't fallback.
     """
     # Pre‐drill the slice for safe_kpi_card’s bundle check
     src = kpis

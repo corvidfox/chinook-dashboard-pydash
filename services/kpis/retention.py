@@ -333,6 +333,13 @@ def get_retention_kpis(
 
         kpis[key] = format_kpi_value(val, value_type=fmt_type)
 
+    # Make select 2-line KPIs one line
+    kpis["cust_line"] = f"{kpis['num_cust']} ({kpis['pct_new']})"
+    kpis["ret_any_line"] = f"{kpis['ret_n_any']} ({kpis['ret_rate_any']})"
+    kpis["ret_return_line"] = f"{kpis['ret_n_return']} ({kpis['ret_rate_return']})"
+    kpis["ret_conv_line"] = f"{kpis['ret_n_conv']} ({kpis['ret_rate_conv']})"
+    kpis["ret_window_line"] = f"{kpis['ret_n_window']} ({kpis['ret_rate_window']})"
+    
     # Add top cohort retention snapshots
     for offset in offsets:
         subset = cohort_df[
@@ -350,6 +357,7 @@ def get_retention_kpis(
 
         kpis[f"top_cohort_month_{offset}"] = cohort_fmt
         kpis[f"top_cohort_retention_{offset}"] = retention_fmt
+        kpis[f"top_cohort_line_{offset}"] = f"{cohort_fmt} ({retention_fmt})"
 
     log_msg("[SQL - KPIs] get_retention_kpis(): Retention KPI aggregation complete.")
     return kpis

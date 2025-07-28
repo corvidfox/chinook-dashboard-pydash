@@ -134,6 +134,10 @@ def get_subset_core_kpis(
             "percent"
             ),
         "tracks_sold_num":         format_kpi_value(int(row["tracks_sold"]), "number", accuracy=1),
+        "tracks_per_purchase":     format_kpi_value(
+            int(row["tracks_sold"]) / int(row["num_purchases"]), 
+            "float"
+            ),
         "revenue_total":           revenue,
         "revenue_total_fmt":       format_kpi_value(revenue, "dollar"),
         "revenue_per_month":       format_kpi_value(
