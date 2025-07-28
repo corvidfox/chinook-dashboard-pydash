@@ -27,7 +27,7 @@ An interactive dashboard that surfaces revenue insights, retention patterns, and
 | Render                        | Cloud hosting (free tier)   
 
 ## Repository Structure
-
+```
 ├── app.py
 ├── config.py
 ├── assets/
@@ -104,7 +104,7 @@ An interactive dashboard that surfaces revenue insights, retention patterns, and
 ├── requirements.txt
 ├── LICENSE
 └── README.md
-
+```
 ## Installation
 
 Clone the repo and install dependencies:
