@@ -7,6 +7,7 @@ Composes the AppShell with header, sidebar container, tabs, page content, and hi
 from dash import html
 import dash_mantine_components as dmc
 from components.header import make_header
+from services.logging_utils import log_msg
 from config import IS_DEV
 
 tabs = [
@@ -20,6 +21,8 @@ tabs = [
 
 if IS_DEV:
     tabs.append(dmc.TabsTab("Overview (Debug)", value="/debug"))
+
+log_msg(f"[LAYOUT] - Loading {len(tabs)} tabs.")
 
 def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, filter_block, active_tab):
     """

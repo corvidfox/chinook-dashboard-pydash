@@ -37,6 +37,7 @@ from services.kpis.shared import get_shared_kpis
 # Start-Up Messages
 log_msg("[APP] Starting Chinook dashboard")
 log_msg(f"[APP] Booting dashboard in {env} mode")
+log_msg(f"[APP] IS_DEV = {IS_DEV}")
 
 # Get connection, make genre/artist summary tables, and
 # make initial filtered data table
