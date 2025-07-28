@@ -97,11 +97,7 @@ def get_ts_monthly_summary(
     df = conn.execute(query).fetchdf()
 
     log_msg(f"[SQL - TS] get_ts_monthly_summary(): retrieved rows: {len(df)}")
-
-    if len(df) == 0:
-        log_msg(f"⚠️⚠️⚠️ Returned Empty Result. Query: {query}")
         
-
     return df
 
 @cache.memoize()
