@@ -99,7 +99,7 @@ def format_kpi_value(
             # integer formatting
             return locale.format_string("%d", int(float_val), grouping=True)
         else:
-            # fractional → use decimal_places
+            # fractional: use decimal_places
             rounded = round(float_val, decimal_places)
             fmt = f"%.{decimal_places}f"
             return locale.format_string(fmt, rounded, grouping=True)
@@ -439,8 +439,8 @@ def make_topn_kpi_card(
             )
             li_children.append(
                 html.Li([
-                    html.Strong(f"{label}: "),
-                    html.Span(str(val))
+                    html.Strong(f"{label} "),
+                    html.Span(f"({str(val)})")
                 ])
             )
 
