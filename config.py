@@ -10,7 +10,9 @@ Central configuration for the Chinook dashboard, including:
 
 import os
 
-ENABLE_LOGGING = os.getenv("DASH_ENV", "development").lower() != "production"
+env = os.getenv("DASH_ENV", "development").lower()
+ENABLE_LOGGING = env != "production"
+IS_DEV = env in ["development", "debug"]
 
 # Font sizes (responsive and rem-based)
 FONT_SIZES = {

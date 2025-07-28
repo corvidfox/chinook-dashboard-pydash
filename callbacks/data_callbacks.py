@@ -70,8 +70,8 @@ def register_callbacks(app):
         Output("retention-cohort-data", "data"),
         Output("cohort-fingerprint",       "data"),
         Input("events-shared-fingerprint", "data"),
-        State("date-range-store",           "data"),
-        State("max-offset-store",           "data"),
+        Input("date-range-store",           "data"),
+        Input("max-offset-store",           "data"),
     )
     def update_retention_cohort(fingerprint, date_range, max_offset):
         """
@@ -94,7 +94,7 @@ def register_callbacks(app):
         Output("kpis-fingerprint",           "data"),
         Input("events-shared-fingerprint",   "data"),
         Input("cohort-fingerprint",           "data"),
-        State("date-range-store",             "data"),
+        Input("date-range-store",             "data"),
         State("max-offset-store",             "data"),
         State("offsets-store",                "data"),
     )

@@ -14,7 +14,9 @@ from config import (
     DEFAULT_COLORSCHEME, 
     get_mantine_theme,
     DEFAULT_OFFSETS,
-    DEFAULT_MAX_OFFSET
+    DEFAULT_MAX_OFFSET,
+    env,
+    IS_DEV
     )
 from services.cache_config import cache
 from services.db import get_connection
@@ -34,7 +36,6 @@ from services.kpis.shared import get_shared_kpis
 
 # Start-Up Messages
 log_msg("[APP] Starting Chinook dashboard")
-env = os.getenv("DASH_ENV", "development").lower()
 log_msg(f"[APP] Booting dashboard in {env} mode")
 
 # Get connection, make genre/artist summary tables, and
@@ -53,6 +54,7 @@ FILTER_COMPONENTS   = filters.make_filter_block(FILTER_META)
 # Dash App Initialization
 app = Dash(
     __name__,
+    title="Chinook Music Retail Analytics Dashboard",
     external_stylesheets=[dbc.themes.FLATLY, dbc.themes.DARKLY],
     suppress_callback_exceptions=True
 )
@@ -185,15 +187,20 @@ register_data_callbacks(app)
 log_msg("[APP] Registered all core callbacks successfully")
 
 # Import Pages 
-from pages import timeseries, geo, overview, coming_soon
+from pages import timeseries, geo, group, retention, insights, overview, coming_soon
 
 # Page-Specific Callback Registration
-overview.register_callbacks(app)
+if IS_DEV:
+    overview.register_callbacks(app)
 timeseries.register_callbacks(app)
 geo.register_callbacks(app)
+group.register_callbacks(app, "genre")
+group.register_callbacks(app, "artist")
+retention.register_callbacks(app)
+insights.register_callbacks(app)
 
 log_msg("[APP] Registered all page-specific callbacks successfully")
 
 # Run Server
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=IS_DEV, use_reloader=False)

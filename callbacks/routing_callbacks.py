@@ -3,22 +3,26 @@ Routing and page rendering callbacks for the Chinook dashboard.
 Handles synchronization between tab selection, URL path, and active page view.
 """
 
+from functools import partial
 from dash import Input, Output, State, html
 from dash.exceptions import PreventUpdate
 from services.logging_utils import log_msg
 
-from pages import timeseries, geo, overview, coming_soon
+from config import IS_DEV
+from pages import timeseries, geo, group, retention, insights, overview, coming_soon
 
 # Page map for routing tabs to layouts
 PAGE_MAP = {
     "/": timeseries.layout,
     "/geo": geo.layout,
-    "/by-genre": coming_soon.layout,
-    "/by-artist": coming_soon.layout,
-    "/retention": coming_soon.layout,
-    "/insights": coming_soon.layout,
-    "/debug": overview.layout,
+    "/by-genre": partial(group.layout, group_var="genre"),
+    "/by-artist": partial(group.layout, group_var="artist"),
+    "/retention": retention.layout,
+    "/insights": insights.layout
 }
+
+if IS_DEV:
+    PAGE_MAP["/debug"] = overview.layout
 
 def register_callbacks(app):
     @app.callback(

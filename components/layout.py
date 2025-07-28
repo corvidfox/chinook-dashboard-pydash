@@ -4,10 +4,22 @@ Application shell layout for the Chinook dashboard.
 Composes the AppShell with header, sidebar container, tabs, page content, and hidden filters.
 """
 
-from dash import html, dcc
+from dash import html
 import dash_mantine_components as dmc
 from components.header import make_header
+from config import IS_DEV
 
+tabs = [
+    dmc.TabsTab("Trends Over Time", value="/"),
+    dmc.TabsTab("Geographic Distribution", value="/geo"),
+    dmc.TabsTab("Performance by Genre", value="/by-genre"),
+    dmc.TabsTab("Performance by Artist", value="/by-artist"),
+    dmc.TabsTab("Customer Retention", value="/retention"),
+    dmc.TabsTab("Key Insights", value="/insights"),
+]
+
+if IS_DEV:
+    tabs.append(dmc.TabsTab("Overview (Debug)", value="/debug"))
 
 def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, filter_block, active_tab):
     """
@@ -38,35 +50,7 @@ def make_layout(filter_meta, summary_df, last_updated, navbar_state, scheme, fil
                 dmc.Tabs(
                     id="main-tabs",
                     value=active_tab,
-                    children=[
-                        dmc.TabsList([
-                            dmc.TabsTab("Trends Over Time", value="/"),
-                            dmc.TabsTab(
-                                "Geographic Distribution", 
-                                value = "/geo"
-                            ),
-                            dmc.TabsTab(
-                                "Performance by Genre", 
-                                value = "/by-genre"
-                                ),
-                            dmc.TabsTab(
-                                "Performance by Artist", 
-                                value = "/by-artist"
-                                ),
-                            dmc.TabsTab(
-                                "Customer Retention", 
-                                value = "/retention"
-                                ),
-                            dmc.TabsTab(
-                                "Key Insights", 
-                                value="/insights"
-                                ),
-                            dmc.TabsTab(
-                                "Overview (Debug)", 
-                                value="/debug"
-                                )
-                        ])
-                    ],
+                    children=[dmc.TabsList(tabs)],
                     mb="lg"
                 ),
                 dmc.LoadingOverlay(
