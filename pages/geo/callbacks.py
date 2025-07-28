@@ -6,7 +6,7 @@ dashboard module.
 
 Callbacks include:
   - AG-Grid theme update
-  - Time-series data table refresh
+  - Geo data table refresh
   - KPI cards update
   - Metric plot rendering
   - CSV download and button toggle
@@ -15,8 +15,6 @@ Public API:
   - register_callbacks(app)
 """
 
-# &&&
-
 from datetime import date
 from typing import Any, Dict, List, Tuple
 
@@ -24,7 +22,6 @@ import pandas as pd
 from dash import Dash, Input, Output, State, dcc
 from dash.exceptions import PreventUpdate
 import dash_mantine_components as dmc
-from dash_iconify import DashIconify
 import plotly.graph_objects as go
 
 from config import get_mantine_theme
@@ -44,7 +41,7 @@ __all__ = ["register_callbacks"]
 
 def register_callbacks(app: Dash) -> None:
     """
-    Wire up all Dash @app.callback functions for the time-series page.
+    Wire up all Dash @app.callback functions for the geo page.
 
     Parameters:
         app: The Dash application instance to register callbacks on.
@@ -66,7 +63,7 @@ def register_callbacks(app: Dash) -> None:
         Returns:
             The same CSS class name to apply to the grid container.
         """
-        log_msg(f"[CALLBACK:timeseries] Updated grid theme: {grid_class}")
+        log_msg(f"[CALLBACK:geo] Updated grid theme: {grid_class}")
         return grid_class
 
 
@@ -125,41 +122,59 @@ def register_callbacks(app: Dash) -> None:
         geo_kpis: Dict[str, Any],
         _fingerprint: str
     ) -> List[dmc.Card]:
+        """
+        Build and return KPI cards for metric, revenue, and customers.
+
+        Parameters:
+            metric_value: Column name in the Geo DataFrame.
+            metric_label: Axis label for the plot.
+            geo_kpis: Dict containing 'topn' with formatted values.
+            _fingerprint: Fingerprint for the KPI set (unused).
+
+        Returns:
+            A list of Dash components representing KPI cards.
+        """
+
         log_msg("[CALLBACK:geo] Updating KPI cards.")
+
         # Top Countries by your chosen metric
-        top_countries = make_topn_kpi_card(
-            kpis       = geo_kpis,
-            metric_key = metric_value,
-            fmt_key    = f"{metric_value}_fmt",
-            title      = "Top Countries",
-            icon       = "fa7-solid:ranking-star",
-            tooltip    = "Top countries by the chosen metric."
+        top_countries   = make_topn_kpi_card(
+            kpis        = geo_kpis,
+            metric_key  = metric_value,
+            fmt_key     = f"{metric_value}_fmt",
+            title       = "Top Countries",
+            icon        = "fa7-solid:ranking-star",
+            tooltip     = "Top countries by the chosen metric.",
+            list_path   = ("topn", "topn_country"),
+            total_label = "Total Countries"
         )
 
         # Revenue Share: show “revenue_fmt (revenue_share_fmt)”
         revenue_share = make_topn_kpi_card(
             kpis            = geo_kpis,
-            metric_key      = "revenue",
-            fmt_key         = "revenue_fmt",
-            title           = "Revenue Share",
+            metric_key      = metric_value,
+            fmt_key         = f"{metric_value}_fmt",
+            title           = "Revenue (% Share)",
             icon            = "icon-park-solid:chart-proportion",
             tooltip         = "Revenue and percentage of total revenue.",
             include_footer  = False,
             custom_label_fn = lambda idx, itm: itm['revenue_fmt'],
-            custom_value_fn = lambda itm: itm['revenue_share_fmt']
+            custom_value_fn = lambda itm: itm['revenue_share_fmt'],
+            list_path  = ("topn", "topn_country")
             )
 
         # Customers & Avg Rev/Customer
         customers = make_topn_kpi_card(
             kpis            = geo_kpis,
-            metric_key      = "num_customers",
-            fmt_key         = "num_customers_fmt",
-            title           = "Customers",
+            metric_key      = metric_value,
+            fmt_key         = f"{metric_value}_fmt",
+            title           = "Customers (Avg Revenue Per)",
             icon            = "mdi:people-outline",
             tooltip         = "Customer count and average revenue per customer.",
             include_footer  = False,
             custom_label_fn = lambda idx, itm: itm["num_customers_fmt"],
-            custom_value_fn = lambda itm: itm["avg_revenue_per_cust_fmt"]
+            custom_value_fn = lambda itm: itm["avg_revenue_per_cust_fmt"],
+            list_path  = ("topn", "topn_country")
         )
 
         return [top_countries, revenue_share, customers]
@@ -254,7 +269,7 @@ def register_callbacks(app: Dash) -> None:
         Parameters:
             geo_yearly_df: Geo Yearly DataFrame (Dict stored format)
             geo_agg_df: Geo Aggregated DataFrame (Dict stored format)
-            metric_value: Column name in the TS DataFrame.
+            metric_value: Column name in the Geo DataFrame.
             metric_label: Axis label for the plot.
             theme_style: Dict containing Mantine theme data.
             date_range: Tuple of two 'YYYY-MM-DD' strings.

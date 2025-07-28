@@ -10,8 +10,10 @@ Functions:
     - build_geo_plot: constructs a Plotly Figure from KPI DataFrame.
 
 """
-from typing import Tuple, Dict, List
-from duckdb import DuckDBPyConnection
+from typing import Tuple, Dict
+import duckdb
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import pandas as pd
 import pycountry
 
@@ -31,11 +33,6 @@ __all__ = [
     "get_geo_metrics_cached",
     "build_geo_plot",
 ]
-
-import duckdb
-import pandas as pd
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
 def get_geo_metrics(conn: duckdb.DuckDBPyConnection,
                     date_range: tuple[str, str],
@@ -170,7 +167,7 @@ def get_geo_metrics_cached(
         date_range:  Tuple of two 'YYYY-MM-DD' date strings.
 
     Returns:
-        DataFrame: Same structure as `get_ts_monthly_summary`.
+        DataFrame: Same structure as `get_geo_metrics`.
     """
     conn = get_connection()
     df_yearly = get_geo_metrics(
@@ -192,6 +189,23 @@ def build_geo_plot(
     metric: Dict[str, str],
     theme_info: Dict[str, str],
 ) -> go.Figure:
+    """
+    Build an animated choropleth plot for a given KPI DataFrame.
+
+    Parameters:
+        df: DataFrame with 'country', 'year', and kpi columns.
+        metric: Dict with keys:
+            - 'var_name': column name in df to plot (e.g., 'revenue')
+            - 'label': human-friendly axis label (e.g., 'Revenue')
+        theme: Dict with optional keys:
+            - 'plotlyTemplate': Plotly template name (default 'plotly_white')
+            - 'fontFamily': font family for all text (default 'Inter')
+
+    Returns:
+        A Plotly Figure object, either an animated choropleth
+        or a "no data" annotation if the DataFrame is empty.
+    """    
+
     var, lab = metric["var_name"], metric["label"]
     zmin, zmax = df[var].min(), df[var].max()
 
@@ -300,7 +314,10 @@ def build_geo_plot(
                     "args": [None, {
                         "frame": {"duration": 1000, "redraw": True},
                         "fromcurrent": True,
-                        "transition": {"duration": 300, "easing": "quadratic-in-out"}
+                        "transition": {
+                            "duration": 300, 
+                            "easing": "quadratic-in-out"
+                            }
                     }]
                 },
                 {
