@@ -29,7 +29,7 @@ def register_callbacks(app):
         Input("grid-theme-store", "data")
     )
     def update_aggrid_theme(grid_class):
-        log_msg(f"[CALLBACK:overview] Updated grid theme → {grid_class}")
+        log_msg(f"[CALLBACK:overview] Updated grid theme: {grid_class}")
         return grid_class, grid_class, grid_class, grid_class, grid_class
 
     @app.callback(
@@ -75,7 +75,7 @@ def register_callbacks(app):
 
         log_msg("[DEBUGGING] - Callback active.")
 
-        dr_text = f"{date_range[0]}  →  {date_range[1]}"
+        dr_text = f"{date_range[0]}  to  {date_range[1]}"
         metric_text = f"Metric {metric_value}: {metric_label}"
 
         static_json = json.dumps(static_kpis, indent=2)

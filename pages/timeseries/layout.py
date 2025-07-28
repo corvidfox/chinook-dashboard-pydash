@@ -34,8 +34,10 @@ def layout():
         ),
 
         # Plot
-        dmc.Space(h=20),
+        dmc.Space(h=10),
         dmc.Title("Interactive Plot", order = 4, ta = "center"),
+        dmc.Space(h=10),
+        
         dmc.Paper([
             dcc.Loading(
                 dcc.Graph(
@@ -51,8 +53,10 @@ def layout():
         ),
 
         # Scrollable Data Table with Download Button
-        dmc.Space(h=20),
+        dmc.Space(h=10),
         dmc.Title("Scrollable Data Table", order = 4, ta="center"),
+        dmc.Space(h=10),
+
         dag.AgGrid(
             id="ts-data-scroll",
             columnDefs=[], rowData=[],

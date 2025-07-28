@@ -16,8 +16,8 @@ import pandas as pd
 import dash_mantine_components as dmc
 from plotly.graph_objects import Figure, Scatter
 
-from services.cache_config import cache
 from services.db import get_connection
+from services.cache_config import cache
 from services.logging_utils import log_msg
 
 # Register Plotly templates at import time.
@@ -52,7 +52,7 @@ def get_ts_monthly_summary(
     assert isinstance(date_range, list) and len(date_range) == 2, \
         "`date_range` must be a list of two YYYY-MM-DD strings"
 
-    log_msg("[SQL] get_ts_monthly_summary(): querying pre-aggregated KPIs.")
+    log_msg("[SQL-TS] get_ts_monthly_summary(): querying pre-aggregated KPIs.")
 
     query = f"""
         WITH first_invoices AS (
@@ -94,7 +94,15 @@ def get_ts_monthly_summary(
         ORDER BY month
     """
 
-    return conn.execute(query).fetchdf()
+    df = conn.execute(query).fetchdf()
+
+    log_msg(f"[SQL - TS] get_ts_monthly_summary(): retrieved rows: {len(df)}")
+
+    if len(df) == 0:
+        log_msg(f"⚠️⚠️⚠️ Returned Empty Result. Query: {query}")
+        
+
+    return df
 
 @cache.memoize()
 def get_ts_monthly_summary_cached(
@@ -107,15 +115,15 @@ def get_ts_monthly_summary_cached(
     The cache key is derived from `events_hash` plus the `date_range`.
 
     Parameters:
+        conn: DuckDb connection
         events_hash: A unique hash representing current filter state.
         date_range:  Tuple of two 'YYYY-MM-DD' date strings.
 
     Returns:
         DataFrame: Same structure as `get_ts_monthly_summary`.
     """
-    conn = get_connection()
     df = get_ts_monthly_summary(
-        conn=conn,
+        conn=get_connection(),
         date_range=list(date_range)
     )
 
@@ -143,12 +151,15 @@ def build_ts_plot(
         A Plotly Figure object, either with a line+marker trace
         or a "no data" annotation if the DataFrame is empty.
     """
+    var, lab = metric["var_name"], metric["label"]
+
     template = theme.get("plotlyTemplate", "plotly_white")
     font_family = theme.get("fontFamily", "Inter")
 
     fig = Figure()
 
-    if df.empty or df[metric["var_name"]].isna().all():
+    # Fallback for empty data set
+    if df.empty or df[var].isna().all():
         fig.add_annotation(
             text="No data available for selected filters",
             xref="paper", yref="paper",
@@ -181,7 +192,7 @@ def build_ts_plot(
 
     fig.add_trace(Scatter(
         x=df["month_fmt"],
-        y=df[metric["var_name"]],
+        y=df[var],
         mode="lines+markers",
         line=dict(width=2),
         marker=dict(size=6),
@@ -197,7 +208,7 @@ def build_ts_plot(
         title=f"{metric['label']} by Month",
         title_x=0.5,
         xaxis_title="Month",
-        yaxis_title=metric["label"],
+        yaxis_title=lab,
         template=template,
         font=dict(family=font_family),
         margin=dict(t=50, l=30, r=30, b=50),

@@ -9,6 +9,8 @@ from dash_iconify import DashIconify
 
 def layout():
     return html.Div([
+        dcc.Store(id="geo-agg-store", data=None),
+
         # KPI Cards
         html.Div(
             [
@@ -34,13 +36,29 @@ def layout():
         ),
 
         # Plot
-        dmc.Space(h=20),
+        dmc.Space(h=10),
         dmc.Title("Interactive Plot", order = 4, ta = "center"),
-        dmc.Title("Plot will go here...", order = 5),
+        dmc.Space(h=10),
+
+        dmc.Paper([
+            dcc.Loading(
+                dcc.Graph(
+                    id="geo-metric-plot", 
+                    style={"height": "100%", "width": "100%"}
+                ),
+                delay_hide = 400,
+                custom_spinner = dmc.Skeleton(
+                    height = 200, width = "100%", radius="sm", visible = True
+                )
+            )
+            ], shadow="sm", p="md", radius="md"
+        ),
 
         # Scrollable Data Table with Download Button
-        dmc.Space(h=20),
+        dmc.Space(h=10),
         dmc.Title("Scrollable Data Table", order = 4, ta="center"),
+        dmc.Space(h=10),
+        
         dag.AgGrid(
             id="geo-data-scroll",
             columnDefs=[], rowData=[],
@@ -63,18 +81,3 @@ def layout():
         ])
     ])
 
-"""
-dmc.Paper([
-            dcc.Loading(
-                dcc.Graph(
-                    id="geo-metric-plot", 
-                    style={"height": "100%", "width": "100%"}
-                ),
-                delay_hide = 400,
-                custom_spinner = dmc.Skeleton(
-                    height = 200, width = "100%", radius="sm", visible = True
-                )
-            )
-            ], shadow="sm", p="md", radius="md"
-        ),
-        """

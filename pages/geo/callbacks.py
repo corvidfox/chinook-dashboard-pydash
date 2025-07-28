@@ -66,12 +66,14 @@ def register_callbacks(app: Dash) -> None:
         Returns:
             The same CSS class name to apply to the grid container.
         """
-        log_msg(f"[CALLBACK:timeseries] Updated grid theme → {grid_class}")
+        log_msg(f"[CALLBACK:timeseries] Updated grid theme: {grid_class}")
         return grid_class
+
 
     @app.callback(
         Output("geo-data-scroll", "columnDefs"),
         Output("geo-data-scroll", "rowData"),
+        Output("geo-agg-store", "data"),
         Input("events-shared-fingerprint", "data"),
         Input("date-range-store", "data"),
     )
@@ -104,8 +106,11 @@ def register_callbacks(app: Dash) -> None:
         log_msg(f"     [CALLBACK:geo] Geo Table Rows = {len(geo_df_yr)}")
 
         return (
-            geo_df_yr_coldefs, geo_df_yr.to_dict("records")
+            geo_df_yr_coldefs, 
+            geo_df_yr.to_dict("records"), 
+            geo_df_agg.to_dict("records")
         )
+
 
     @app.callback(
         Output("geo-kpi-cards", "children"),
@@ -158,6 +163,7 @@ def register_callbacks(app: Dash) -> None:
         )
 
         return [top_countries, revenue_share, customers]
+   
     
     @app.callback(
         Output("download-geo-csv", "data"),
@@ -190,6 +196,7 @@ def register_callbacks(app: Dash) -> None:
 
         return dcc.send_data_frame(df.to_csv, filename=filename, index=False)
 
+
     @app.callback(
         Output("btn-download-geo", "disabled"),
         Output("btn-download-geo", "children"),
@@ -221,54 +228,70 @@ def register_callbacks(app: Dash) -> None:
 
         return disabled, label, style
     
-    """
+
     @app.callback(
         Output("geo-metric-plot", "figure"),
-        Input("events-shared-fingerprint", "data"),
+        Input("geo-data-scroll", "rowData"),
+        Input("geo-agg-store", "data"),
         Input("metric-store", "data"),
         Input("metric-label-store", "data"),
-        Input("date-range-store", "data"),
         Input("theme-store", "data"),
+        State("date-range-store", "data"),
+        State("events-shared-fingerprint", "data"),
     )
     def render_geo_plot(
-        events_hash: str,
+        geo_yearly_df: Dict,
+        geo_agg_df: Dict,
         metric_value: str,
         metric_label: str,
-        date_range: Tuple[str, str],
         theme_style: Dict[str, Any],
+        date_range: Tuple[str, str],
+        events_hash: str,
     ) -> go.Figure:
-        if not events_hash or not metric_value:
+        """ 
+        Generate and return a Choropleth Plotly figure for the selected metric.
+
+        Parameters:
+            geo_yearly_df: Geo Yearly DataFrame (Dict stored format)
+            geo_agg_df: Geo Aggregated DataFrame (Dict stored format)
+            metric_value: Column name in the TS DataFrame.
+            metric_label: Axis label for the plot.
+            theme_style: Dict containing Mantine theme data.
+            date_range: Tuple of two 'YYYY-MM-DD' strings.
+            events_hash: Filter fingerprint.
+
+        Returns:
+            A Plotly Figure object.
+        """
+        if not events_hash or not metric_value or not geo_yearly_df or not geo_agg_df:
             raise PreventUpdate
+
+        log_msg("[CALLBACK:geo] Updating Plot.")
 
         # Mantine‐themed Plotly settings
         theme_data = get_mantine_theme(theme_style["color_scheme"])
         theme_info = {
-            "template": theme_data.get("plotlyTemplate", "plotly_white"),
-            "fontFamily": theme_data.get("fontFamily", "Inter"),
+            "plotlyTemplate": theme_data.get("plotlyTemplate", "plotly_white"),
+            "fontFamily": theme_data.get("fontFamily", "Inter")
         }
 
-        # Load yearly + aggregate (“All”) data
-        df_yearly, df_aggregate = get_geo_metrics_cached(events_hash, date_range)
+        metric_dict = {
+            "var_name": metric_value,
+            "label": metric_label
+        }
 
-        log_msg(f"     [CALLBACK:geo] PLOTTER: Geo Table Rows = {len(df_yearly)}")
-
-        log_msg(f"Yearly years before anything else: {df_yearly['year'].unique().tolist()}")
-
-        if "year" not in df_yearly.columns:
-            log_msg("⚠️ WARNING: 'year' column not found in df_yearly. Renaming?")
-            if "Year" in df_yearly.columns:
-                df_yearly = df_yearly.rename(columns={"Year": "year"})
+        # Load data
+        df_yearly = pd.DataFrame.from_dict(geo_yearly_df)
+        df_aggregate = pd.DataFrame.from_dict(geo_agg_df)
 
         # Ensure the yearly slice is strings and tag aggregate with "All"
         df_yearly["year"] = df_yearly["year"].astype(str)
         df_aggregate = df_aggregate.assign(year="All")
 
-        log_msg(f"Original yearly year values: {df_yearly['year'].unique().tolist()}")
+        log_msg(f"    [CALLBACK:geo] Read in GEO YEARLY DF with {len(df_yearly)} rows")
 
         # Combine both DataFrames
         df = pd.concat([df_yearly, df_aggregate], ignore_index=True)
-
-        log_msg(f"Combined raw year values: {df['year'].unique().tolist()}")
 
         # Standardize to ISO3, drop only invalid ISO rows
         df["iso_alpha"] = df["country"].apply(standardize_country_to_iso3)
@@ -278,10 +301,9 @@ def register_callbacks(app: Dash) -> None:
         years = sorted([y for y in df["year"].unique() if y != "All"]) + ["All"]
         df["year"] = pd.Categorical(df["year"], categories=years, ordered=True)
 
+        log_msg("   [CALLBACK:geo] Rendering plot.")
+
         # Build and return the animated choropleth
-        return build_geo_plot(
-            df,
-            {"var_name": metric_value, "label": metric_label},
-            theme_info
-        )
-"""
+        fig = build_geo_plot(df, metric_dict,theme_info)
+
+        return fig

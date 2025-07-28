@@ -20,8 +20,6 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 from dash import Dash, Input, Output, State, dcc
 from dash.exceptions import PreventUpdate
-import dash_mantine_components as dmc
-from dash_iconify import DashIconify
 
 from config import get_mantine_theme
 from pages.timeseries.helpers import (
@@ -59,8 +57,9 @@ def register_callbacks(app: Dash) -> None:
         Returns:
             The same CSS class name to apply to the grid container.
         """
-        log_msg(f"[CALLBACK:timeseries] Updated grid theme → {grid_class}")
+        log_msg(f"[CALLBACK:timeseries] Updated grid theme: {grid_class}")
         return grid_class
+
 
     @app.callback(
         Output("ts-data-scroll", "columnDefs"),
@@ -82,7 +81,7 @@ def register_callbacks(app: Dash) -> None:
         Returns:
             A tuple of (columnDefs, rowData) for AG-Grid.
         """
-        if not events_hash:
+        if not events_hash or not date_range:
             raise PreventUpdate
 
         log_msg("[CALLBACK:timeseries] - Callback active.")
@@ -99,6 +98,7 @@ def register_callbacks(app: Dash) -> None:
         return (
             ts_df_coldefs, ts_df.to_dict("records")
         )
+
 
     @app.callback(
         Output("ts-kpi-cards", "children"),
@@ -120,6 +120,8 @@ def register_callbacks(app: Dash) -> None:
             A list of Dash components representing KPI cards.
         """
         log_msg("[CALLBACK:timeseries] Updating KPI cards.")
+        
+        # Declare content of cards
         revenue_specs = [
         { "label": "Total",
             "key_path": ["metadata_kpis", "revenue_total_fmt"],
@@ -157,7 +159,7 @@ def register_callbacks(app: Dash) -> None:
             "tooltip": "(%) First-time customers." }
         ]
 
-        # 2) Build cards with a single call each
+        # Build cards with a single call each
         cards = [
         make_static_kpi_card(
             kpi_bundle=dynamic_kpis,
@@ -186,57 +188,7 @@ def register_callbacks(app: Dash) -> None:
 
         return cards
 
-    @app.callback(
-        Output("ts-metric-plot", "figure"),
-        Input("events-shared-fingerprint", "data"),
-        Input("metric-store", "data"),
-        Input("metric-label-store", "data"),
-        Input("date-range-store", "data"),
-        Input("theme-store", "data"),
-    )
-    def render_ts_plot(
-        events_hash: str,
-        metric_value: str,
-        metric_label: str,
-        date_range: Tuple[str, str],
-        theme_style: Dict[str, Any],
-    ) -> Any:
-        """
-        Generate and return a Plotly figure for the selected KPI metric.
 
-        Parameters:
-            events_hash: Filter fingerprint.
-            metric_value: Column name in the TS DataFrame.
-            metric_label: Axis label for the plot.
-            date_range: Tuple of two 'YYYY-MM-DD' strings.
-            theme_style: Dict containing Mantine theme data.
-
-        Returns:
-            A Plotly Figure object.
-        """
-        if not events_hash or not metric_value:
-            raise PreventUpdate
-
-        metric_dict = {
-            "var_name": metric_value,
-            "label": metric_label
-        }
-
-        theme_data = get_mantine_theme(theme_style["color_scheme"])
-
-        theme_info = {
-            "plotlyTemplate": theme_data.get("plotlyTemplate", "plotly_white"),
-            "fontFamily": theme_data.get("fontFamily", "Inter"),
-            "primaryColor": theme_data.get("primaryColor", "indigo"),
-        }
-
-        log_msg("[CALLBACK:timeseries] Rendering plot.")
-
-        df = get_ts_monthly_summary_cached(events_hash, date_range)
-        fig = build_ts_plot(df, metric_dict, theme_info)
-
-        return fig
-    
     @app.callback(
         Output("download-ts-csv", "data"),
         Input("btn-download-ts", "n_clicks"),
@@ -268,6 +220,7 @@ def register_callbacks(app: Dash) -> None:
 
         return dcc.send_data_frame(df.to_csv, filename=filename, index=False)
 
+
     @app.callback(
         Output("btn-download-ts", "disabled"),
         Output("btn-download-ts", "children"),
@@ -298,3 +251,63 @@ def register_callbacks(app: Dash) -> None:
             style    = {}
 
         return disabled, label, style
+    
+
+    @app.callback(
+        Output("ts-metric-plot", "figure"),
+        Input("ts-data-scroll", "rowData"),
+        Input("metric-store", "data"),
+        Input("metric-label-store", "data"),
+        Input("theme-store", "data"),
+        State("date-range-store", "data"),
+        State("events-shared-fingerprint", "data"),
+    )
+    def render_ts_plot(
+        ts_df: Dict,
+        metric_value: str,
+        metric_label: str,
+        theme_style: Dict[str, Any],
+        date_range: Tuple[str, str],
+        events_hash: str,
+    ) -> Any:
+        """
+        Generate and return a Time Series Plotly figure for the selected metric.
+
+        Parameters:
+            ts_df: TS DataFrame (Dict stored format)
+            metric_value: Column name in the TS DataFrame.
+            metric_label: Axis label for the plot.
+            theme_style: Dict containing Mantine theme data.
+            date_range: Tuple of two 'YYYY-MM-DD' strings.
+            events_hash: Filter fingerprint.
+            
+        Returns:
+            A Plotly Figure object.
+        """
+        if not events_hash or not metric_value or not ts_df:
+            raise PreventUpdate
+
+        log_msg("[CALLBACK:timeseries] Updating Plot.")
+
+        ts_df = pd.DataFrame.from_dict(ts_df)
+
+        log_msg(f"    [CALLBACK:timeseries] Read in TS DF with {len(ts_df)} rows")
+
+        metric_dict = {
+            "var_name": metric_value,
+            "label": metric_label
+        }
+
+        theme_data = get_mantine_theme(theme_style["color_scheme"])
+
+        theme_info = {
+            "plotlyTemplate": theme_data.get("plotlyTemplate", "plotly_white"),
+            "fontFamily": theme_data.get("fontFamily", "Inter"),
+            "primaryColor": theme_data.get("primaryColor", "indigo"),
+        }
+
+        log_msg("   [CALLBACK:timeseries] Rendering plot.")
+
+        fig = build_ts_plot(ts_df, metric_dict, theme_info)
+
+        return fig

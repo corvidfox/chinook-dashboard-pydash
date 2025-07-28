@@ -62,7 +62,7 @@ def get_geo_metrics(conn: duckdb.DuckDBPyConnection,
     assert isinstance(date_range, list) and len(date_range) == 2, \
         "`date_range` must be a list of two YYYY-MM-DD strings"
 
-    log_msg("[SQL] get_geo_metrics(): querying pre-aggregated KPIs.")
+    log_msg("[SQL - GEO] get_geo_metrics(): querying pre-aggregated KPIs.")
 
     start_date, end_date = date_range
     # Catch poorly-formed dates early
@@ -195,6 +195,30 @@ def build_geo_plot(
     var, lab = metric["var_name"], metric["label"]
     zmin, zmax = df[var].min(), df[var].max()
 
+    template = theme_info.get("plotlyTemplate", "plotly_white")
+    font_family = theme_info.get("fontFamily", "Inter")
+
+    # Fallback for empty data set
+    if df.empty or df[var].isna().all():
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No data available for selected filters",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5,
+            showarrow=False,
+            font=dict(family=font_family, size=16),
+        )
+        fig.update_layout(
+            template=template,
+            font=dict(family=font_family),
+            height=200,
+            margin=dict(t=30, b=30, l=30, r=30),
+        )
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        return fig
+
+
     # Build master list of ALL ISO3s via pycountry
     all_iso = [c.alpha_3 for c in pycountry.countries if hasattr(c, "alpha_3")]
 
@@ -258,8 +282,8 @@ def build_geo_plot(
 
     # Layout + play/pause + slider
     fig.update_layout(
-        template=theme_info["template"],
-        font_family=theme_info["fontFamily"],
+        template=template,
+        font_family=font_family,
         title=dict(text=f"{lab} by Country (Animated by Year)", x=0.5),
         geo=dict(
             showframe=True,
