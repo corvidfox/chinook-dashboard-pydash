@@ -17,7 +17,7 @@ Includes:
 import locale
 import numbers
 import math
-import country_converter as coco
+import country_converter
 import pandas as pd
 from typing import Tuple, Union, List, Dict, Any, Callable, Optional
 
@@ -27,6 +27,8 @@ from dash_iconify import DashIconify
 import dash_mantine_components as dmc
 
 from services.logging_utils import log_msg
+
+coco = country_converter.CountryConverter()
 
 # Set system locale for number formatting (fallback to default)
 try:
