@@ -204,7 +204,7 @@ def get_retention_kpis(
     log_msg(f"[SQL - KPIs] Loaded {len(df)} customers with in-window data")
 
     # Derived flags and metrics
-    df["cust_new"]     = df["num_in_window"] > 0 & df["last_before_window"].isna()
+    df["cust_new"]     = (df["num_in_window"] > 0) & df["last_before_window"].isna()
     df["repeat_any"]   = df["total_purchases"] > 1
     df["repeat_ret"]   = ~df["cust_new"] & (df["num_in_window"] > 0)
     df["repeat_conv"]  = df["cust_new"] & ((df["num_in_window"] > 1) | df["first_after_window"].isna())
@@ -348,7 +348,10 @@ def get_retention_kpis(
         ]
 
         if not subset.empty:
-            top_row = subset.sort_values("retention_pct", ascending=False).iloc[0]
+            top_row = subset.sort_values(
+                by=["retention_pct", "cohort_month"],
+                ascending=[False, True]
+            ).iloc[0]
             cohort_fmt = pd.to_datetime(top_row["cohort_month"]).strftime("%b %Y")
             retention_fmt = format_kpi_value(top_row["retention_pct"], value_type="percent")
         else:
