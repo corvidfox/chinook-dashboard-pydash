@@ -100,6 +100,10 @@ def register_callbacks(app: Dash) -> None:
 
         log_msg("[CALLBACK:retention] - Callback active.")
 
+        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
+        date_range=[start_date,end_date]
+
         cohort_df = pd.DataFrame.from_dict(cohort_df_dict)
         cohort_df_coldefs = [
             {"field": c, "headerName": c, "sortable": True, "filter": True} 
@@ -392,6 +396,10 @@ def register_callbacks(app: Dash) -> None:
 
         log_msg("[CALLBACK:retention] Updating Decay Plot.")
 
+        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
+        date_range=[start_date,end_date]
+
         decay_df = pd.DataFrame.from_dict(decay_df)
 
         log_msg(f"    [CALLBACK:retention] Read in Decay DF with {len(decay_df)} rows")
@@ -440,6 +448,10 @@ def register_callbacks(app: Dash) -> None:
             raise PreventUpdate
 
         log_msg("[CALLBACK:retention] Updating Cohort Plot.")
+
+        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
+        date_range=[start_date,end_date]
 
         cohort_df = pd.DataFrame.from_dict(cohort_df)
 

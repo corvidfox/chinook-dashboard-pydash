@@ -89,6 +89,10 @@ def register_callbacks(app: Dash, group_var: str) -> None:
 
         log_msg(f"[CALLBACK:group] - Callback active for {group_var}.")
 
+        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
+        date_range=[start_date,end_date]
+
         group_df = get_group_data_cached(events_hash, date_range, group_var)
         group_df_coldefs = [
             {"field": c, "headerName": c, "sortable": True, "filter": True} 
@@ -274,6 +278,10 @@ def register_callbacks(app: Dash, group_var: str) -> None:
             raise PreventUpdate
 
         log_msg(f"[CALLBACK:group] Updating {group_var} Plot.")
+
+        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
+        date_range=[start_date,end_date]
 
         group_df = pd.DataFrame.from_dict(group_df)
 

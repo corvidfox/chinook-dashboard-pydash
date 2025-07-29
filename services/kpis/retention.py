@@ -44,6 +44,10 @@ def get_retention_cohort_data(
     assert len(date_range) == 2 and all(isinstance(d, str) for d in date_range)
     log_msg("[SQL - COHORT] get_retention_cohort_data(): querying cohort heatmap data.")
 
+    start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+    end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
+    date_range = [start_date, end_date]
+
     # Step 1: If no max_offset, compute from full dataset range
     if max_offset is None:
         bounds_sql = f"""
@@ -58,8 +62,8 @@ def get_retention_cohort_data(
         max_offset = (max_date.year - min_date.year) * 12 + (max_date.month - min_date.month)
 
     # Step 2: Format SQL
-    start = pd.to_datetime(date_range[0]).date()
-    end   = pd.to_datetime(date_range[1]).date()
+    start = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+    end   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
 
     sql = f"""
     WITH cohort_dates AS (
@@ -137,8 +141,8 @@ def get_retention_kpis(
         bounds_df = conn.execute(bounds_sql).fetchdf()
         date_range = bounds_df.iloc[0].tolist()
 
-    start_date = pd.to_datetime(date_range[0]).date()
-    end_date   = pd.to_datetime(date_range[1]).date()
+    start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
+    end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
 
     # Load event boundaries per customer
     query = f"""
