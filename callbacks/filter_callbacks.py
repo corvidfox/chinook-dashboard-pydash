@@ -4,7 +4,8 @@ Resets all persistent filter inputs to their default state.
 Also synchronizes individual filter inputs to their corresponding session-level stores.
 """
 
-from dash import Input, Output, dcc
+import pandas as pd
+from dash import Input, Output
 from dash.exceptions import PreventUpdate
 from services.logging_utils import log_msg
 from services.metadata import get_filter_metadata
@@ -45,8 +46,24 @@ def register_callbacks(app):
     def sync_date_range(value):
         if not value or len(value) != 2 or any(v is None for v in value):
             raise PreventUpdate
-        log_msg(f"[CALLBACK:filter] Synced date-range-store: {value}")
-        return value
+
+        # Safely convert to datetime and round to full month
+        try:
+            start_dt = pd.to_datetime(value[0]).replace(day=1)
+            end_dt = pd.to_datetime(value[1]).replace(day=1) + pd.offsets.MonthEnd(0)
+
+            rounded_dates = [
+                start_dt.strftime("%Y-%m-%d"),
+                end_dt.strftime("%Y-%m-%d")
+            ]
+
+            log_msg(f"[CALLBACK:filter] Synced date-range-store: {rounded_dates}")
+            return rounded_dates
+
+        except Exception as e:
+            log_msg(f"[CALLBACK ERROR]: {e}")
+            raise PreventUpdate
+
 
     # Sync metric filter to store
     @app.callback(
