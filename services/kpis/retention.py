@@ -303,15 +303,15 @@ def get_retention_kpis(
             if not df["gap_retention"].dropna().empty else None
         ),
         "avg_gap_life": (
-            df["avg_gap_life"].dropna().median() 
+            df["avg_gap_life"].dropna().mean() 
             if not df["avg_gap_life"].dropna().empty else None
         ),
         "avg_gap_window": (
-            df["avg_gap_window"].dropna().median() 
+            df["avg_gap_window"].dropna().mean() 
             if not df["avg_gap_window"].dropna().empty else None
         ),
         "avg_gap_bound": (
-            df["avg_gap_bound"].dropna().median() 
+            df["avg_gap_bound"].dropna().mean() 
             if not df["avg_gap_bound"].dropna().empty else None
         )
     }
