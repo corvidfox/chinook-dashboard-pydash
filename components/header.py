@@ -26,7 +26,11 @@ def make_header(navbar_collapsed=False, scheme="light"):
             py="sm",
             children=[
                 dmc.Burger(id="burger", opened=not navbar_collapsed),
-                dmc.Title("Chinook Music Retail Analytics Dashboard", order=2),
+                dmc.Title(
+                    "Chinook Music Retail Analytics Dashboard", 
+                    order=2,
+                    className = "header-title"
+                    ),
                 dmc.Switch(
                     id={"type":"theme-switch", "role":"header"},
                     persistence=True,
