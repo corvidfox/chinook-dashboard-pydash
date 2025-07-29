@@ -346,8 +346,7 @@ def build_cohort_heatmap(
             hoverinfo="text",
             colorscale="Viridis_r",
             zmin=0,
-            zmax=100,            
-            #zmax=np.nanmax(z),
+            zmax=100,         
             colorbar=dict(title="Retention (%)"),
             hoverongaps=False
         )
@@ -357,7 +356,11 @@ def build_cohort_heatmap(
     fig.update_layout(
         template=template,
         font=dict(family=font_family),
-        title="Customer Retention by Cohort",
+        title=dict(
+            text="Customer Retention by Cohort",
+            x=0.5,
+            xanchor = "center"
+        ),
         xaxis=dict(
             title="Months Since First Purchase",
             type="category",
