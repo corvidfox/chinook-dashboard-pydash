@@ -92,9 +92,6 @@ def register_callbacks(app: Dash) -> None:
             raise PreventUpdate
 
         log_msg("[CALLBACK:geo] - Callback active.")
-        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
-        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
-        date_range=[start_date,end_date]
 
         geo_df_yr, geo_df_agg = get_geo_metrics_cached(events_hash, date_range)
         geo_df_yr_coldefs = [
@@ -285,10 +282,6 @@ def register_callbacks(app: Dash) -> None:
             raise PreventUpdate
 
         log_msg("[CALLBACK:geo] Updating Plot.")
-        
-        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
-        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
-        date_range=[start_date,end_date]
 
         # Mantine‐themed Plotly settings
         theme_data = get_mantine_theme(theme_style["color_scheme"])

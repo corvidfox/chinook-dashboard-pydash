@@ -86,10 +86,6 @@ def register_callbacks(app: Dash) -> None:
 
         log_msg("[CALLBACK:timeseries] - Callback active.")
 
-        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
-        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
-        date_range=[start_date,end_date]
-
         ts_df = get_ts_monthly_summary_cached(events_hash, date_range)
         ts_df_coldefs = [
             {"field": c, "headerName": c, "sortable": True, "filter": True} 
@@ -292,10 +288,6 @@ def register_callbacks(app: Dash) -> None:
             raise PreventUpdate
 
         log_msg("[CALLBACK:timeseries] Updating Plot.")
-
-        start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
-        end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
-        date_range=[start_date,end_date]
 
         ts_df = pd.DataFrame.from_dict(ts_df)
 

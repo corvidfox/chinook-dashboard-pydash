@@ -63,10 +63,6 @@ def get_shared_kpis(
     """
     log_msg("[SQL - KPI PIPELINE] Starting shared KPI aggregation")
 
-    start_date = pd.to_datetime(date_range[0]).to_period("M").start_time.date()
-    end_date   = pd.to_datetime(date_range[1]).to_period("M").end_time.date()
-    date_range = [start_date, end_date]
-
     # Core subset‐level KPIs
     metadata_kpis = get_subset_core_kpis(conn, date_range)
     log_msg("   [SQL - KPI PIPELINE] Retrieved subset metadata KPIs")
