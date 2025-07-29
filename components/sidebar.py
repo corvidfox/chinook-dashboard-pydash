@@ -136,7 +136,7 @@ def make_sidebar(filter_meta, summary_df, last_updated):
                                     dmc.AccordionPanel([
                                         dmc.Stack([
                                             make_meta_row("fa:pencil", "Created by", "Morrigan M.", "https://github.com/corvidfox"),
-                                            make_meta_row("fa:github", "", "GitHub Repo", "https://github.com/corvidfox/chinook-dashboard-rshiny"),
+                                            make_meta_row("fa:github", "", "GitHub Repo", "https://github.com/corvidfox/chinook-dashboard-pydash"),
                                             make_meta_row("fa:link", "", "Chinook Dataset", "https://github.com/lerocha/chinook-database"),
                                             make_meta_row("fa:file", "", "Portfolio Post", "https://corvidfox.github.io/projects/posts/2025_bi_chinook.html"),
                                             make_meta_row("tdesign:calendar-2-filled", "Last updated:", last_updated),
