@@ -7,6 +7,7 @@ and registers global + page-specific callbacks.
 
 from dash import Dash, html, dcc
 import os
+from apscheduler.schedulers.background import BackgroundScheduler
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 
@@ -51,6 +52,11 @@ SUMMARY_DF          = get_static_summary()
 LAST_UPDATED        = get_last_commit_date()
 INITIAL_NAVBAR_STATE = {"collapsed": {"mobile": False, "desktop": False}}
 FILTER_COMPONENTS   = filters.make_filter_block(FILTER_META)
+
+# Background: Check Last Commit Date Every Hour
+scheduler = BackgroundScheduler()
+scheduler.add_job(get_last_commit_date, 'interval', hours=1)
+scheduler.start()
 
 # Dash App Initialization
 app = Dash(

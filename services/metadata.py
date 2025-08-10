@@ -12,6 +12,7 @@ Designed for high-efficiency reads from DuckDB and low-frequency API usage.
 
 import os
 import json
+import time
 import pandas as pd
 from typing import Dict, Tuple, Any
 from duckdb import DuckDBPyConnection
@@ -20,7 +21,9 @@ from github import Github
 from services.db import get_connection
 from services.logging_utils import log_msg
 from services.display_utils import format_kpi_value
-from config import CACHE_PATH
+from config import CACHE_PATH, CACHE_EXPIRY_SECONDS
+
+
 
 def get_last_commit_date() -> str:
     """
@@ -39,8 +42,12 @@ def get_last_commit_date() -> str:
         try:
             with open(CACHE_PATH, "r") as f:
                 cache = json.load(f)
-                log_msg("     [META - GITHUB] Last commit date loaded from local cache")
-                return cache.get("last_updated", "Unavailable")
+                cached_time = cache.get("timestamp")
+                if cached_time:
+                    age = time.time() - float(cached_time)
+                    if age < CACHE_EXPIRY_SECONDS:
+                        log_msg("     [META - GITHUB] Last commit date loaded from local cache")
+                        return cache.get("last_updated", "Unavailable")
         except Exception as e:
             log_msg(f"     [META - GITHUB] Error reading cache: {e}")
 

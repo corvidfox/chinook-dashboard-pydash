@@ -49,6 +49,7 @@ BREAKPOINTS = {
 
 # GitHub metadata caching path
 CACHE_PATH = "data/last_commit_cache.json"
+CACHE_EXPIRY_SECONDS = 3600  # 1 hour
 
 # Default color scheme
 DEFAULT_COLORSCHEME = "light"
