@@ -86,7 +86,8 @@ def get_shared_kpis(
                 conn,
                 topn_df,
                 group_var=group,
-                total_revenue=float(metadata_kpis["revenue_total"])
+                total_revenue=float(metadata_kpis["revenue_total"]),
+                date_range=date_range
             )
             group_tables[var] = formatted
 

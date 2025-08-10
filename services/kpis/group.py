@@ -12,9 +12,9 @@ Functions:
   get_group_kpis_full(conn, group_var, date_range) -> pd.DataFrame
   topn_kpis_slice_topn(df, metric, n) -> pd.DataFrame
   topn_kpis_generate(df_full, metrics, n) -> Dict[str, pd.DataFrame]
-  topn_kpis_format_display(df, group_var, total_revenue) -> pd.DataFrame
-  query_catalog_sales(conn, tbl, group_var) -> pd.DataFrame
-  enrich_catalog_kpis(conn, tbl, topn_df, group_var) -> pd.DataFrame
+  topn_kpis_format_display(df, group_var, total_revenue, date_range) -> pd.DataFrame
+  query_catalog_sales(conn, tbl, group_var, date_range) -> pd.DataFrame
+  enrich_catalog_kpis(conn, tbl, topn_df, group_var, date_range) -> pd.DataFrame
 """
 
 from typing import List, Dict, Literal
@@ -23,6 +23,7 @@ from duckdb import DuckDBPyConnection
 
 from services.logging_utils import log_msg
 from services.display_utils import format_kpi_value
+from services.sql_filters import apply_date_filter
 
 def get_group_kpis_full(
     conn: DuckDBPyConnection,
@@ -134,7 +135,8 @@ def topn_kpis_format_display(
         conn: DuckDBPyConnection, 
         df: pd.DataFrame, 
         group_var: str, 
-        total_revenue: float = None
+        total_revenue: float = None,
+        date_range: List[str] = None
         ) -> pd.DataFrame:
     """
     Adds derived KPI columns and attaches formatted display values.
@@ -145,6 +147,7 @@ def topn_kpis_format_display(
         df (pd.DataFrame): Raw top-N KPI slice with columns like revenue, tracks_sold, etc.
         group_var (str): One of 'Genre', 'Artist', 'BillingCountry'
         total_revenue (float): Optional total revenue for share-of-revenue calculations
+        date_range (Optional[List[str]]): Date range as ["YYYY-MM-DD", "YYYY-MM-DD"]
 
     Returns:
         pd.DataFrame: Extended with derived KPIs and *_fmt display columns
@@ -162,7 +165,7 @@ def topn_kpis_format_display(
 
     # Enrich with catalog statistics for artist and genre
     if group_var in ["Genre", "Artist"]:
-        df = enrich_catalog_kpis(conn, df, group_var)
+        df = enrich_catalog_kpis(conn, df, group_var, date_range)
 
     # Format columns row-by-row
     for col in df.columns:
@@ -194,7 +197,8 @@ def topn_kpis_format_display(
 
 def query_catalog_sales(
     conn: DuckDBPyConnection,
-    group_var: str = "Genre"
+    group_var: str = "Genre",
+    date_range: List[str] = None
 ) -> pd.DataFrame:
     """
     Compute percent-of-catalog sold for each Genre or Artist.
@@ -204,6 +208,7 @@ def query_catalog_sales(
             An active DuckDB connection.
         group_var : str, default "Genre"
             Must be one of {"Genre", "Artist"}.
+        date_range (Optional[List[str]]): Date range as ["YYYY-MM-DD", "YYYY-MM-DD"]
 
     Returns:
         pd.DataFrame
@@ -219,6 +224,9 @@ def query_catalog_sales(
     group_var = group_var.capitalize()
     if group_var not in ("Genre", "Artist"):
         raise ValueError("`group_var` must be 'Genre' or 'Artist'")
+
+    # Date range clause
+    date_clause = apply_date_filter(date_range)
 
     # Build the SQL snippets for joins/fields
     if group_var == "Genre":
@@ -250,6 +258,7 @@ def query_catalog_sales(
       COUNT(DISTINCT il.TrackId) * 1.0
         / NULLIF(ANY_VALUE({catalog_field}), 0)  AS pct_catalog_sold
     FROM filtered_invoices AS e
+    {date_clause}
     JOIN InvoiceLine il ON il.InvoiceId = e.InvoiceId
     {join_clause}
     GROUP BY group_val
@@ -263,7 +272,8 @@ def query_catalog_sales(
 def enrich_catalog_kpis(
     conn: DuckDBPyConnection,
     topn_df: pd.DataFrame,
-    group_var: str = "Genre"
+    group_var: str = "Genre",
+    date_range: List[str] = None
 ) -> pd.DataFrame:
     """
     Join catalog-level KPIs (coverage & diversity) onto a Top-N summary.
@@ -276,6 +286,7 @@ def enrich_catalog_kpis(
             either 'genre' or 'artist' (lowercase), matching group_var.lower().
         group_var : str, default "Genre"
             Either 'Genre' or 'Artist'.
+        date_range (Optional[List[str]]): Date range as ["YYYY-MM-DD", "YYYY-MM-DD"]
 
     Returns:
         pd.DataFrame
@@ -290,7 +301,7 @@ def enrich_catalog_kpis(
         raise ValueError("`group_var` must be 'Genre' or 'Artist'")
 
     # Fetch full catalog‐sales KPIs
-    catalog_df = query_catalog_sales(conn, group_var)
+    catalog_df = query_catalog_sales(conn, group_var, date_range = date_range)
 
     # Subset to only the Top‐N groups in topn_df
     if "group_val" not in topn_df.columns:
