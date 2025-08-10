@@ -16,7 +16,7 @@ import time
 import pandas as pd
 from typing import Dict, Tuple, Any
 from duckdb import DuckDBPyConnection
-from github import Github
+from github import Github, Auth
 
 from services.db import get_connection
 from services.logging_utils import log_msg
@@ -55,7 +55,7 @@ def get_last_commit_date() -> str:
     try:
         log_msg("     [META - GITHUB] Checking GitHub...")
         token = os.getenv("GITHUB_TOKEN")
-        g = Github(token) if token else Github()
+        g = Github(Auth.Token(token)) if token else Github()
         repo = g.get_repo("corvidfox/chinook-dashboard-pydash")
         last_commit = repo.get_commits()[0]
         date_str = last_commit.commit.author.date.strftime("%b %d, %Y")
