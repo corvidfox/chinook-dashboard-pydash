@@ -32,7 +32,7 @@ coco = country_converter.CountryConverter()
 
 # Set system locale for number formatting (fallback to default)
 try:
-    locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+    locale.setlocale(locale.LC_ALL, "en_US")
 except Exception:
     locale.setlocale(locale.LC_ALL, "C")
 
