@@ -17,13 +17,17 @@ import pandas as pd
 from typing import Dict, Tuple, Any
 from duckdb import DuckDBPyConnection
 from github import Github, Auth
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from services.db import get_connection
 from services.logging_utils import log_msg
 from services.display_utils import format_kpi_value
 from config import CACHE_PATH, CACHE_EXPIRY_SECONDS
 
-
+def format_commit_date(dt_utc: datetime) -> str:
+    dt_local = dt_utc.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("America/Chicago"))
+    return dt_local.strftime("%b %d, %Y")
 
 def get_last_commit_date() -> str:
     """
@@ -55,10 +59,10 @@ def get_last_commit_date() -> str:
     try:
         log_msg("     [META - GITHUB] Checking GitHub...")
         token = os.getenv("GITHUB_TOKEN")
-        g = Github(Auth.Token(token)) if token else Github()
+        g = Github(token) if token else Github()
         repo = g.get_repo("corvidfox/chinook-dashboard-pydash")
         last_commit = repo.get_commits()[0]
-        date_str = last_commit.commit.author.date.strftime("%b %d, %Y")
+        date_str = format_commit_date(last_commit.commit.author.date)
 
         with open(CACHE_PATH, "w") as f:
             json.dump({"last_updated": date_str}, f)
