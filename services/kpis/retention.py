@@ -46,15 +46,23 @@ def get_retention_cohort_data(
 
     # Step 1: If no max_offset, compute from full dataset range
     if max_offset is None:
-        bounds_sql = f"""
-        SELECT MIN(i.InvoiceDate) AS min_date,
-               MAX(i.InvoiceDate) AS max_date
+        bounds_sql = """
+        SELECT MIN(i.InvoiceDate) AS min_date,        
+            MAX(i.InvoiceDate) AS max_date
         FROM filtered_invoices fi
-        JOIN Invoice i ON fi.InvoiceId = i.InvoiceId
+        JOIN Invoice i ON fi.InvoiceId = i.InvoiceId  
         """
         date_bounds = conn.execute(bounds_sql).fetchdf()
         min_date = pd.to_datetime(date_bounds["min_date"].iloc[0])
         max_date = pd.to_datetime(date_bounds["max_date"].iloc[0])
+
+        if pd.isna(min_date) or pd.isna(max_date):
+            log_msg("[SQL - COHORT] No invoice data available for offset calculation.")
+            return pd.DataFrame(columns=[
+                "cohort_month", "month_offset", "num_active_customers",
+                "cohort_size", "retention_pct"
+            ])
+
         max_offset = (max_date.year - min_date.year) * 12 + (max_date.month - min_date.month)
 
     # Step 2: Format SQL
