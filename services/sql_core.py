@@ -74,8 +74,7 @@ def get_events_shared(
         previous_hash (str, optional): Prior hash of InvoiceId set
 
     Returns:
-        Tuple[Optional[pd.DataFrame], str]: DataFrame (or None if unchanged),
-        and the new hash signature.
+        Str: The new hash signature.
     """
     log_msg("[SQL CORE] Running get_events_shared()")
 
